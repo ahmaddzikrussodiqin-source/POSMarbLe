@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">POSMarbLe</string>
+    <string name="title_activity_main">POSMarbLe</string>
+    <string name="package_name">id.posmarble.app</string>
+    <string name="custom_url_scheme">id.posmarble.app</string>
+</resources>
