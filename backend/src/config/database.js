@@ -4,11 +4,24 @@ const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
 
-const useSQLite = process.env.USE_SQLITE === 'true' || !process.env.DB_HOST;
+const useSQLite = process.env.USE_SQLITE === 'true' && process.env.NODE_ENV !== 'production';
 
 let pool;
 let db;
 let SQL;
+
+// Initialize MySQL pool if not using SQLite
+if (!useSQLite) {
+  pool = mysql.createPool({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+  });
+}
 
 const useSQLiteAsync = async () => {
   if (!SQL) {
@@ -358,6 +371,7 @@ const initDatabase = async () => {
     }
   } catch (error) {
     console.error('Error initializing database:', error);
+    throw error;
   }
 };
 

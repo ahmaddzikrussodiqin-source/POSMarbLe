@@ -15,11 +15,22 @@ const { initDatabase } = require('./config/database');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const path = require('path');
 
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+// Serve static files from frontend dist directory for Android app
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../frontend-dist')));
+
+  // Catch all handler: send back index.html for any non-API routes
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend-dist/index.html'));
+  });
+}
 
 // Routes
 app.use('/api/auth', authRoutes);

@@ -102,24 +102,125 @@ Frontend akan berjalan di `http://localhost:5173`
 
 ## Deploy ke Railway
 
-### Backend
+### Persiapan
 
-1. Push code ke GitHub
-2. Login ke Railway dan buat new project
-3. Connect ke GitHub repository
+1. Build frontend untuk production:
+```bash
+cd frontend
+npm run build
+```
+
+2. Copy folder `dist` dari `frontend/dist` ke `backend/frontend-dist`:
+```bash
+cp -r frontend/dist backend/frontend-dist
+```
+
+3. Push code ke GitHub (termasuk folder frontend-dist)
+
+### Backend Deployment
+
+1. Login ke Railway:
+```bash
+railway login
+```
+
+2. Buat new project:
+```bash
+railway init
+```
+
+3. Connect ke GitHub repository:
+```bash
+railway connect
+```
+
 4. Tambahkan environment variables:
-   - `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` (dari Railway MySQL)
-   - `JWT_SECRET`
+   - `JWT_SECRET` = secret key untuk JWT (buat random string)
+   - `NODE_ENV=production`
+   - `USE_SQLITE=true` (untuk menggunakan SQLite di production)
    - `PORT=3000`
-5. Deploy会自动创建数据库表
 
-### Frontend
+5. Deploy:
+```bash
+railway up
+```
 
-1. Push code ke GitHub
-2. Login ke Vercel dan import repository
-3. Set environment variable:
-   - `VITE_API_URL` = URL Railway API (contoh: `https://your-railway-app.up.railway.app/api`)
-4. Deploy
+Backend akan otomatis membuat database SQLite dan user admin default.
+
+### Android App (Capacitor)
+
+1. Update `frontend/src/services/api.js` dengan URL Railway production:
+```javascript
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://your-railway-app.up.railway.app/api';
+```
+
+2. Update `frontend/capacitor.config.json`:
+```json
+{
+  "appId": "id.posmarble.app",
+  "appName": "POSMarbLe",
+  "webDir": "dist",
+  "server": {
+    "android": {
+      "url": "https://your-railway-app.up.railway.app",
+      "allowNavigation": ["https://your-railway-app.up.railway.app"]
+    }
+  }
+}
+```
+
+3. Build frontend:
+```bash
+cd frontend
+npm run build
+```
+
+4. Sync Capacitor:
+```bash
+npx cap sync android
+```
+
+5. Buka Android Studio:
+```bash
+npx cap open android
+```
+
+6. Build APK di Android Studio:
+   - Build > Make Project
+   - Build > Build Bundle(s)/APK(s) > Build APK(s)
+
+7. Install APK ke device Android
+
+### Troubleshooting
+
+#### Login Gagal di Android App
+
+Jika login gagal di aplikasi Android:
+
+1. **Periksa URL API**: Pastikan `frontend/src/services/api.js` menggunakan URL Railway production yang benar.
+
+2. **CORS Issues**: Pastikan backend mengizinkan origin dari aplikasi Android. Tambahkan di backend jika perlu:
+```javascript
+app.use(cors({
+  origin: ['https://your-railway-app.up.railway.app', 'capacitor://localhost'],
+  credentials: true
+}));
+```
+
+3. **Database Connection**: Pastikan backend menggunakan SQLite di production dengan `USE_SQLITE=true`.
+
+4. **Rebuild App**: Setelah update konfigurasi, rebuild frontend dan sync Capacitor:
+```bash
+cd frontend
+npm run build
+npx cap sync android
+npx cap open android
+```
+
+5. **Check Logs**: Lihat Railway logs untuk error backend:
+```bash
+railway logs
+```
 
 ## Default Login
 
