@@ -30,6 +30,22 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// Routes - MUST BE REGISTERED BEFORE catch-all handler
+app.use('/api/auth', authRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/ingredients', ingredientRoutes);
+app.use('/api/purchases', purchaseRoutes);
+app.use('/api/app', appRoutes);
+
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'OK', message: 'POSMarbLe API is running' });
+});
+
 // Serve static files from frontend dist directory
 // Check multiple locations for Railway deployment
 const possiblePaths = [
@@ -66,29 +82,13 @@ app.get('/', (req, res) => {
 });
 
 // Catch all handler: send back index.html for any non-API routes
-// This handles client-side routing
+// This handles client-side routing - MUST BE REGISTERED LAST
 app.get('*', (req, res) => {
   // Don't interfere with API routes
   if (req.path.startsWith('/api')) {
     return res.status(404).json({ error: 'API endpoint not found' });
   }
   res.sendFile(path.join(staticPath, 'index.html'));
-});
-
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/categories', categoryRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/reports', reportRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/ingredients', ingredientRoutes);
-app.use('/api/purchases', purchaseRoutes);
-app.use('/api/app', appRoutes);
-
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'POSMarbLe API is running' });
 });
 
 // Error handling middleware
