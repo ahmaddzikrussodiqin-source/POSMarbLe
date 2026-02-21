@@ -8,10 +8,10 @@ const bcrypt = require('bcryptjs');
 console.log('Environment variables:');
 console.log('USE_SQLITE:', process.env.USE_SQLITE);
 console.log('NODE_ENV:', process.env.NODE_ENV);
-console.log('DB_HOST:', process.env.DB_HOST ? '(set)' : '(not set)');
-console.log('DB_USER:', process.env.DB_USER ? '(set)' : '(not set)');
-console.log('DB_PASSWORD:', process.env.DB_PASSWORD ? '(set)' : '(not set)');
-console.log('DB_NAME:', process.env.DB_NAME ? '(set)' : '(not set)');
+console.log('DB_HOST:', process.env.MYSQL_HOST || process.env.DB_HOST || '(not set)');
+console.log('DB_USER:', process.env.MYSQL_USER || process.env.DB_USER || '(not set)');
+console.log('DB_PASSWORD:', process.env.MYSQL_PASSWORD || process.env.DB_PASSWORD ? '(set)' : '(not set)');
+console.log('DB_NAME:', process.env.MYSQL_DATABASE || process.env.DB_NAME || '(not set)');
 
 const useSQLite = process.env.USE_SQLITE === 'true' && process.env.NODE_ENV !== 'production';
 
@@ -21,11 +21,17 @@ let SQL;
 
 // Initialize MySQL pool if not using SQLite
 if (!useSQLite) {
+  // Support both Railway MySQL variable names and custom DB_ variables
+  const dbHost = process.env.MYSQL_HOST || process.env.DB_HOST;
+  const dbUser = process.env.MYSQL_USER || process.env.DB_USER;
+  const dbPassword = process.env.MYSQL_PASSWORD || process.env.DB_PASSWORD;
+  const dbName = process.env.MYSQL_DATABASE || process.env.DB_NAME;
+  
   pool = mysql.createPool({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
+    host: dbHost,
+    user: dbUser,
+    password: dbPassword,
+    database: dbName,
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
