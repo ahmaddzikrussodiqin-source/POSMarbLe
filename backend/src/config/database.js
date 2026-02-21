@@ -36,7 +36,6 @@ if (!useSQLite) {
     connectionLimit: 10,
     queueLimit: 0
   });
-}
 
 const useSQLiteAsync = async () => {
   if (!SQL) {
@@ -341,7 +340,7 @@ const initDatabase = async () => {
         CREATE TABLE IF NOT EXISTS order_items (
           id INT AUTO_INCREMENT PRIMARY KEY,
           order_id INT NOT NULL,
-          product_id INT NOT NULL,
+          product_id INT,
           product_name VARCHAR(100) NOT NULL,
           unit_price DECIMAL(10, 2) NOT NULL,
           quantity INT NOT NULL,
