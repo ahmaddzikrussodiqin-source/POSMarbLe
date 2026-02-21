@@ -24,13 +24,30 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Serve static files from frontend dist directory
-// Check both locations for frontend dist
-const frontendDistPath = path.join(__dirname, '../frontend-dist');
-const frontendDistAltPath = path.join(__dirname, '../../frontend/dist');
+// Check multiple locations for Railway deployment
+const possiblePaths = [
+  path.join(__dirname, '../frontend-dist'),        // backend/frontend-dist
+  path.join(__dirname, '../../frontend-dist'),      // frontend-dist (root)
+  path.join(__dirname, '../../frontend/dist'),      // frontend/dist
+  path.join(process.cwd(), '../frontend-dist'),    // from app directory
+  path.join(process.cwd(), 'frontend-dist'),      // from app directory
+  '/app/frontend-dist',                            // Railway absolute path
+  '/app/frontend/dist'                             // Railway absolute path
+];
 
-let staticPath = frontendDistPath;
-if (!fs.existsSync(frontendDistPath) && fs.existsSync(frontendDistAltPath)) {
-  staticPath = frontendDistAltPath;
+let staticPath = null;
+for (const p of possiblePaths) {
+  if (fs.existsSync(p) && fs.existsSync(path.join(p, 'index.html'))) {
+    staticPath = p;
+    console.log('Found static files at:', staticPath);
+    break;
+  }
+}
+
+// Fallback - use first path
+if (!staticPath) {
+  staticPath = possiblePaths[0];
+  console.log('Static path (fallback):', staticPath);
 }
 
 if (process.env.NODE_ENV === 'production') {
