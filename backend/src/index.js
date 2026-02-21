@@ -18,6 +18,12 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const path = require('path');
 
+// Debug: Log key environment variables in index.js
+console.log('[index.js] PORT:', PORT);
+console.log('[index.js] NODE_ENV:', process.env.NODE_ENV);
+console.log('[index.js] DB_HOST:', process.env.DB_HOST);
+console.log('[index.js] USE_SQLITE:', process.env.USE_SQLITE);
+
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());

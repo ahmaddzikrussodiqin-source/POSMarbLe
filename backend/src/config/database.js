@@ -4,6 +4,15 @@ const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
 
+// Debug: Log environment variables
+console.log('Environment variables:');
+console.log('USE_SQLITE:', process.env.USE_SQLITE);
+console.log('NODE_ENV:', process.env.NODE_ENV);
+console.log('DB_HOST:', process.env.DB_HOST ? '(set)' : '(not set)');
+console.log('DB_USER:', process.env.DB_USER ? '(set)' : '(not set)');
+console.log('DB_PASSWORD:', process.env.DB_PASSWORD ? '(set)' : '(not set)');
+console.log('DB_NAME:', process.env.DB_NAME ? '(set)' : '(not set)');
+
 const useSQLite = process.env.USE_SQLITE === 'true' && process.env.NODE_ENV !== 'production';
 
 let pool;
