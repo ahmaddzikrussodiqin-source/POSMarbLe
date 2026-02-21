@@ -114,5 +114,11 @@ export const ingredientsAPI = {
   setProductIngredients: (productId, ingredients) => api.post(`/ingredients/product/${productId}`, { ingredients }),
 };
 
+// App Version API
+export const appVersionAPI = {
+  getVersion: () => api.get('/app/version'),
+  checkUpdate: (currentVersion) => api.post('/app/check-update', { currentVersion }),
+};
+
 export default api;
 

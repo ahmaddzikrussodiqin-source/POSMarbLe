@@ -4,6 +4,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Auth/Login';
 import POS from './pages/POS/POS';
 import AdminDashboard from './pages/Admin/AdminDashboard';
+import VersionBadge from './components/VersionBadge';
+import UpdateNotification from './components/UpdateNotification';
 
 function App() {
   return (
@@ -38,6 +40,10 @@ function App() {
           {/* Default redirect for unknown routes */}
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
+        
+        {/* Version display and update notification - only shows in Android app */}
+        <VersionBadge />
+        <UpdateNotification />
       </Router>
     </AuthProvider>
   );
