@@ -15,6 +15,7 @@ const POS = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [quantity, setQuantity] = useState(1);
+  const [showMenuModal, setShowMenuModal] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -268,6 +269,19 @@ const POS = () => {
               <p className="text-gray-500 text-lg">Produk tidak ditemukan</p>
             </div>
           )}
+
+          {/* Menu Button - Below Products */}
+          <div className="mt-8 flex justify-center">
+            <button
+              onClick={() => setShowMenuModal(true)}
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-semibold shadow-lg hover:from-amber-600 hover:to-orange-600 transition-all transform hover:scale-105"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+              Menu
+            </button>
+          </div>
         </div>
 
         {/* Cart Section - Modern POS Style */}
@@ -533,6 +547,110 @@ const POS = () => {
                 className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-bold hover:from-amber-600 hover:to-orange-600 transition"
               >
                 Selesai
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Menu Modal - Information about POS Workflow */}
+      {showMenuModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl p-0 max-w-lg w-full shadow-2xl overflow-hidden">
+            {/* Menu Header */}
+            <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-6 text-white">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold">Menu</h2>
+                    <p className="text-amber-100 text-sm">Panduan Penggunaan POS</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowMenuModal(false)}
+                  className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center hover:bg-opacity-30 transition"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Menu Body - Workflow Steps */}
+            <div className="p-6">
+              <h3 className="text-lg font-bold text-gray-800 mb-4">Cara Menggunakan POS:</h3>
+              
+              <div className="space-y-4">
+                {/* Step 1 */}
+                <div className="flex gap-4 items-start">
+                  <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-amber-600 font-bold">1</span>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-gray-800">Pilih Produk</h4>
+                    <p className="text-gray-500 text-sm">Ketika ada pembeli, kasir memilih produk yang akan dibeli oleh pembeli dari daftar menu yang tersedia.</p>
+                  </div>
+                </div>
+
+                {/* Step 2 */}
+                <div className="flex gap-4 items-start">
+                  <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-orange-600 font-bold">2</span>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-gray-800">Tambah ke Keranjang</h4>
+                    <p className="text-gray-500 text-sm">Produk yang dipilih akan masuk ke keranjang. Kasir dapat mengatur jumlah produk sesuai pesanan.</p>
+                  </div>
+                </div>
+
+                {/* Step 3 */}
+                <div className="flex gap-4 items-start">
+                  <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-red-600 font-bold">3</span>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-gray-800">Pembayaran</h4>
+                    <p className="text-gray-500 text-sm">Kasir memilih metode pembayaran (Tunai, QRIS, atau Debit) dan menyelesaikan pembayaran.</p>
+                  </div>
+                </div>
+
+                {/* Step 4 */}
+                <div className="flex gap-4 items-start">
+                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-green-600 font-bold">4</span>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-gray-800">Cetak Nota</h4>
+                    <p className="text-gray-500 text-sm">Setelah pembayaran berhasil, sistem akan otomatis mencetak nota sebagai bukti transaksi.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Info Box */}
+              <div className="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <div className="flex gap-3">
+                  <div className="text-2xl">💡</div>
+                  <div>
+                    <p className="text-blue-800 font-medium text-sm">Tips:</p>
+                    <p className="text-blue-600 text-sm">Gunakan fitur pencarian untuk menemukan produk dengan cepat.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Menu Footer */}
+            <div className="p-4 bg-gray-50">
+              <button
+                onClick={() => setShowMenuModal(false)}
+                className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-bold hover:from-amber-600 hover:to-orange-600 transition"
+              >
+                Mengerti
               </button>
             </div>
           </div>
