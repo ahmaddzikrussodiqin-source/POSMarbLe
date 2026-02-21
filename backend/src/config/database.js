@@ -36,6 +36,7 @@ if (!useSQLite) {
     connectionLimit: 10,
     queueLimit: 0
   });
+}
 
 const useSQLiteAsync = async () => {
   if (!SQL) {
