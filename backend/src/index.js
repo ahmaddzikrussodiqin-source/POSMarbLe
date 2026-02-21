@@ -1,7 +1,8 @@
-    require('dotenv').config();
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const fs = require('fs');
 
 const authRoutes = require('./routes/auth');
 const categoryRoutes = require('./routes/categories');
@@ -22,13 +23,22 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Serve static files from frontend dist directory for Android app
+// Serve static files from frontend dist directory
+// Check both locations for frontend dist
+const frontendDistPath = path.join(__dirname, '../frontend-dist');
+const frontendDistAltPath = path.join(__dirname, '../../frontend/dist');
+
+let staticPath = frontendDistPath;
+if (!fs.existsSync(frontendDistPath) && fs.existsSync(frontendDistAltPath)) {
+  staticPath = frontendDistAltPath;
+}
+
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../frontend-dist')));
+  app.use(express.static(staticPath));
 
   // Catch all handler: send back index.html for any non-API routes
   app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend-dist/index.html'));
+    res.sendFile(path.join(staticPath, 'index.html'));
   });
 }
 
