@@ -50,14 +50,23 @@ if (!staticPath) {
   console.log('Static path (fallback):', staticPath);
 }
 
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(staticPath));
+// Always serve static files in production
+app.use(express.static(staticPath));
 
-  // Catch all handler: send back index.html for any non-API routes
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(staticPath, 'index.html'));
-  });
-}
+// Serve index.html for root path
+app.get('/', (req, res) => {
+  res.sendFile(path.join(staticPath, 'index.html'));
+});
+
+// Catch all handler: send back index.html for any non-API routes
+// This handles client-side routing
+app.get('*', (req, res) => {
+  // Don't interfere with API routes
+  if (req.path.startsWith('/api')) {
+    return res.status(404).json({ error: 'API endpoint not found' });
+  }
+  res.sendFile(path.join(staticPath, 'index.html'));
+});
 
 // Routes
 app.use('/api/auth', authRoutes);
