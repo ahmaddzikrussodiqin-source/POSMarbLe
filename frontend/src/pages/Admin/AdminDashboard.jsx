@@ -53,6 +53,7 @@ const AdminDashboard = () => {
   const [purchaseHistory, setPurchaseHistory] = useState([]);
   const [purchaseFilter, setPurchaseFilter] = useState({ startDate: '', endDate: '' });
   const [loadingPurchaseHistory, setLoadingPurchaseHistory] = useState(false);
+  const [orderFilter, setOrderFilter] = useState({ startDate: '', endDate: '' });
 
   // Nota settings state
   const [notaSettings, setNotaSettings] = useState({
@@ -106,7 +107,14 @@ const AdminDashboard = () => {
         setCategories(categoriesRes.data);
         setIngredients(ingredientsRes.data);
       } else if (activeTab === 'orders') {
-        const res = await ordersAPI.getAll({});
+        const params = {};
+        if (orderFilter.startDate) {
+          params.start_date = orderFilter.startDate;
+        }
+        if (orderFilter.endDate) {
+          params.end_date = orderFilter.endDate;
+        }
+        const res = await ordersAPI.getAll(params);
         setOrders(res.data);
       } else if (activeTab === 'ingredients') {
         const res = await ingredientsAPI.getAll();
@@ -459,6 +467,14 @@ const AdminDashboard = () => {
 
   const applyPurchaseFilter = () => {
     loadPurchaseHistory();
+  };
+
+  const handleOrderFilterChange = (field, value) => {
+    setOrderFilter({ ...orderFilter, [field]: value });
+  };
+
+  const applyOrderFilter = () => {
+    loadData();
   };
 
   // Product Ingredients handlers
@@ -1105,6 +1121,46 @@ const AdminDashboard = () => {
               {activeTab === 'orders' && (
                 <div>
                   <h2 className="text-2xl font-bold text-gray-800 mb-6">Semua Pesanan</h2>
+                  
+                  {/* Date Filter */}
+                  <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                    <p className="text-sm font-medium text-gray-700 mb-2">Filter Tanggal</p>
+                    <div className="flex flex-wrap gap-3 items-end">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Tanggal Mulai</label>
+                        <input
+                          type="date"
+                          value={orderFilter.startDate}
+                          onChange={(e) => handleOrderFilterChange('startDate', e.target.value)}
+                          className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Tanggal Akhir</label>
+                        <input
+                          type="date"
+                          value={orderFilter.endDate}
+                          onChange={(e) => handleOrderFilterChange('endDate', e.target.value)}
+                          className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        />
+                      </div>
+                      <button
+                        onClick={applyOrderFilter}
+                        className="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm hover:bg-amber-700"
+                      >
+                        Terapkan Filter
+                      </button>
+                      <button
+                        onClick={() => {
+                          setOrderFilter({ startDate: '', endDate: '' });
+                          setTimeout(() => loadData(), 0);
+                        }}
+                        className="px-4 py-2 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-gray-100"
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  </div>
                   
                   <div className="bg-white rounded-xl shadow overflow-hidden">
                     <table className="w-full">

@@ -112,7 +112,7 @@ const orderController = {
   // Get all orders
   getAll: async (req, res) => {
     try {
-      const { date, status, limit = 50, offset = 0 } = req.query;
+      const { date, start_date, end_date, status, limit = 50, offset = 0 } = req.query;
       
       let sql = `
         SELECT o.*, u.name as created_by_name 
@@ -125,6 +125,16 @@ const orderController = {
       if (date) {
         sql += ' AND DATE(o.created_at) = ?';
         params.push(date);
+      }
+
+      if (start_date) {
+        sql += ' AND DATE(o.created_at) >= ?';
+        params.push(start_date);
+      }
+
+      if (end_date) {
+        sql += ' AND DATE(o.created_at) <= ?';
+        params.push(end_date);
       }
 
       if (status) {
@@ -278,4 +288,3 @@ const orderController = {
 };
 
 module.exports = orderController;
-
