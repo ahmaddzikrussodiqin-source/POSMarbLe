@@ -37,9 +37,9 @@ const orderController = {
 
       // Insert order
       const [orderResult] = await query(
-        `INSERT INTO orders (order_number, total_amount, payment_method, status, created_by, notes) 
-         VALUES (?, ?, ?, 'completed', ?, ?)`,
-        [orderNumber, totalAmount, payment_method || 'cash', userId, notes || null]
+        `INSERT INTO orders (order_number, total_amount, payment_method, status, created_by) 
+         VALUES (?, ?, ?, 'completed', ?)`,
+        [orderNumber, totalAmount, payment_method || 'cash', userId]
       );
 
       const orderId = orderResult.insertId;
