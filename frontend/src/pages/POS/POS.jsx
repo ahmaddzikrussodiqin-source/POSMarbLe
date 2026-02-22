@@ -333,8 +333,8 @@ const POS = () => {
                 <h2 className="text-xl font-bold">Keranjang</h2>
                 <p className="text-white text-sm opacity-90">{cartItemCount} item</p>
               </div>
-              <div className="bg-white bg-opacity-30 px-4 py-2 rounded-xl border-2 border-white">
-                <span className="text-2xl font-bold text-white drop-shadow-md">{formatCurrency(cartTotal)}</span>
+              <div className="bg-white px-4 py-2 rounded-xl border-2 border-gray-200">
+                <span className="text-2xl font-bold text-black">{formatCurrency(cartTotal)}</span>
               </div>
             </div>
           </div>
