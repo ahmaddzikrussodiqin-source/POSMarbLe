@@ -102,6 +102,8 @@ const purchaseController = {
     try {
       const { start_date, end_date, ingredient_id, limit = 50, offset = 0 } = req.query;
       
+      console.log('Purchase filter received:', { start_date, end_date, ingredient_id });
+      
       let sql = `
         SELECT p.*, u.name as created_by_name 
         FROM purchases p 
@@ -111,13 +113,15 @@ const purchaseController = {
       const params = [];
 
       if (start_date && end_date) {
-        sql += ' AND DATE(p.created_at) >= DATE(?) AND DATE(p.created_at) <= DATE(?)';
+        // For SQLite, use datetime function to properly compare dates
+        sql += " AND datetime(p.created_at) >= datetime(?, 'start of day') AND datetime(p.created_at) < datetime(?, '+1 day', 'start of day')";
         params.push(start_date, end_date);
+        console.log('Date range filter:', start_date, 'to', end_date);
       } else if (start_date) {
-        sql += ' AND DATE(p.created_at) >= DATE(?)';
+        sql += " AND datetime(p.created_at) >= datetime(?, 'start of day')";
         params.push(start_date);
       } else if (end_date) {
-        sql += ' AND DATE(p.created_at) <= DATE(?)';
+        sql += " AND datetime(p.created_at) < datetime(?, '+1 day', 'start of day')";
         params.push(end_date);
       }
 
@@ -129,20 +133,25 @@ const purchaseController = {
       sql += ' ORDER BY p.created_at DESC LIMIT ? OFFSET ?';
       params.push(parseInt(limit), parseInt(offset));
 
+      console.log('Executing SQL:', sql);
+      console.log('With params:', params);
+      
       const [purchases] = await query(sql, params);
+      
+      console.log('Found purchases:', purchases.length);
 
       // Get total count
       let countSql = `SELECT COUNT(*) as count FROM purchases p WHERE 1=1`;
       const countParams = [];
       
       if (start_date && end_date) {
-        countSql += ' AND DATE(p.created_at) >= DATE(?) AND DATE(p.created_at) <= DATE(?)';
+        countSql += " AND datetime(p.created_at) >= datetime(?, 'start of day') AND datetime(p.created_at) < datetime(?, '+1 day', 'start of day')";
         countParams.push(start_date, end_date);
       } else if (start_date) {
-        countSql += ' AND DATE(p.created_at) >= DATE(?)';
+        countSql += " AND datetime(p.created_at) >= datetime(?, 'start of day')";
         countParams.push(start_date);
       } else if (end_date) {
-        countSql += ' AND DATE(p.created_at) <= DATE(?)';
+        countSql += " AND datetime(p.created_at) < datetime(?, '+1 day', 'start of day')";
         countParams.push(end_date);
       }
 
