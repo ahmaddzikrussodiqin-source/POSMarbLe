@@ -561,8 +561,8 @@ const AdminDashboard = () => {
       <header className="bg-amber-700 text-white px-6 py-4 flex justify-between items-center shadow-lg">
         <div className="flex items-center gap-4">
           <h1 className="text-2xl font-bold">POSMarbLe Admin</h1>
-          <span className="text-amber-200">|</span>
-          <span className="text-amber-200">Management</span>
+          <span className="text-white opacity-50">|</span>
+          <span className="text-white opacity-80">Management</span>
         </div>
         <div className="flex items-center gap-4">
           <button

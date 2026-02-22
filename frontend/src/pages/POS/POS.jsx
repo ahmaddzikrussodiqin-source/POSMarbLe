@@ -222,7 +222,7 @@ const POS = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full px-5 py-3 bg-white border-0 rounded-2xl shadow-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none text-gray-700"
               />
-              <svg className="w-5 h-5 text-gray-400 absolute right-4 top-1/2 transform -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-gray-500 absolute right-4 top-1/2 transform -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
@@ -331,10 +331,10 @@ const POS = () => {
             <div className="flex justify-between items-center">
               <div>
                 <h2 className="text-xl font-bold">Keranjang</h2>
-                <p className="text-amber-100 text-sm">{cartItemCount} item</p>
+                <p className="text-white text-sm opacity-90">{cartItemCount} item</p>
               </div>
               <div className="bg-white bg-opacity-20 px-4 py-2 rounded-xl">
-                <span className="text-2xl font-bold">{formatCurrency(cartTotal)}</span>
+                <span className="text-2xl font-bold text-white">{formatCurrency(cartTotal)}</span>
               </div>
             </div>
           </div>
@@ -345,7 +345,7 @@ const POS = () => {
               <div className="text-center py-12">
                 <div className="text-6xl mb-4">🛒</div>
                 <p className="text-gray-500">Keranjang masih kosong</p>
-                <p className="text-gray-400 text-sm">Pilih menu untuk memulai</p>
+                <p className="text-gray-500 text-sm">Pilih menu untuk memulai</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -577,7 +577,7 @@ const POS = () => {
                   <div key={index} className="flex justify-between text-gray-700">
                     <div>
                       <span className="font-medium">{item.product_name}</span>
-                      <span className="text-gray-400 ml-2">x{item.quantity}</span>
+                      <span className="text-gray-500 ml-2">x{item.quantity}</span>
                     </div>
                     <span className="font-medium">{formatCurrency(item.subtotal, notaSettings.currency)}</span>
                   </div>
@@ -670,7 +670,7 @@ const POS = () => {
                   </div>
                   <div>
                     <h2 className="text-2xl font-bold">Menu</h2>
-                    <p className="text-amber-100 text-sm">Panduan Penggunaan POS</p>
+                    <p className="text-white text-sm opacity-90">Panduan Penggunaan POS</p>
                   </div>
                 </div>
                 <button
