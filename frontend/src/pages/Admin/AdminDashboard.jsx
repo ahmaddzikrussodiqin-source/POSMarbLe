@@ -54,6 +54,8 @@ const AdminDashboard = () => {
   const [purchaseFilter, setPurchaseFilter] = useState({ startDate: '', endDate: '' });
   const [loadingPurchaseHistory, setLoadingPurchaseHistory] = useState(false);
   const [orderFilter, setOrderFilter] = useState({ startDate: '', endDate: '' });
+  const [selectedOrderForReceipt, setSelectedOrderForReceipt] = useState(null);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
 
   // Nota settings state
   const [notaSettings, setNotaSettings] = useState({
@@ -475,6 +477,11 @@ const AdminDashboard = () => {
 
   const applyOrderFilter = () => {
     loadData();
+  };
+
+  const handleViewReceipt = (order) => {
+    setSelectedOrderForReceipt(order);
+    setShowReceiptModal(true);
   };
 
   // Product Ingredients handlers
@@ -1172,6 +1179,7 @@ const AdminDashboard = () => {
                           <th className="text-left py-3 px-4">Kasir</th>
                           <th className="text-left py-3 px-4">Waktu</th>
                           <th className="text-left py-3 px-4">Status</th>
+                          <th className="text-left py-3 px-4">Aksi</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1192,6 +1200,14 @@ const AdminDashboard = () => {
                               }`}>
                                 {order.status}
                               </span>
+                            </td>
+                            <td className="py-3 px-4">
+                              <button
+                                onClick={() => handleViewReceipt(order)}
+                                className="text-amber-600 hover:text-amber-800 text-sm font-medium"
+                              >
+                                🧾 Lihat Nota
+                              </button>
                             </td>
                           </tr>
                         ))}
@@ -1841,6 +1857,107 @@ const AdminDashboard = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Receipt Modal */}
+      {showReceiptModal && selectedOrderForReceipt && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <h3 className="text-xl font-bold text-gray-800 mb-4 text-center">
+              Nota Pesanan
+            </h3>
+            
+            {/* Shop Info */}
+            <div className="text-center border-b pb-4 mb-4">
+              <h4 className="font-bold text-lg">{notaSettings.shop_name || 'POSMarbLe'}</h4>
+              {notaSettings.address && (
+                <p className="text-sm text-gray-600">{notaSettings.address}</p>
+              )}
+              {notaSettings.phone && (
+                <p className="text-sm text-gray-600">Telp: {notaSettings.phone}</p>
+              )}
+            </div>
+
+            {/* Order Info */}
+            <div className="text-sm space-y-1 border-b pb-3 mb-3">
+              <div className="flex justify-between">
+                <span className="text-gray-600">No. Pesanan</span>
+                <span className="font-medium">{selectedOrderForReceipt.order_number}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Tanggal</span>
+                <span>{formatDateTime(selectedOrderForReceipt.created_at)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Kasir</span>
+                <span>{selectedOrderForReceipt.created_by_name || '-'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Metode Pembayaran</span>
+                <span className="capitalize">{selectedOrderForReceipt.payment_method}</span>
+              </div>
+            </div>
+
+            {/* Order Items */}
+            <div className="border-b pb-3 mb-3">
+              <p className="text-sm font-medium text-gray-700 mb-2">Item Pesanan:</p>
+              {selectedOrderForReceipt.items && selectedOrderForReceipt.items.length > 0 ? (
+                <div className="space-y-1">
+                  {selectedOrderForReceipt.items.map((item, index) => (
+                    <div key={index} className="flex justify-between text-sm">
+                      <span>{item.product_name} x{item.quantity}</span>
+                      <span>{formatCurrency(item.subtotal)}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">Tidak ada detail item</p>
+              )}
+            </div>
+
+            {/* Totals */}
+            <div className="space-y-1 border-b pb-3 mb-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Subtotal</span>
+                <span>{formatCurrency(selectedOrderForReceipt.total_amount)}</span>
+              </div>
+              {notaSettings.tax_rate > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Pajak ({notaSettings.tax_rate}%)</span>
+                  <span>{formatCurrency(selectedOrderForReceipt.total_amount * notaSettings.tax_rate / 100)}</span>
+                </div>
+              )}
+              <div className="flex justify-between font-bold text-lg pt-2 border-t">
+                <span>Total</span>
+                <span>{formatCurrency(selectedOrderForReceipt.total_amount * (1 + notaSettings.tax_rate / 100))}</span>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="text-center text-sm text-gray-600 italic mb-4">
+              {notaSettings.footer_text || 'Terima kasih telah belanja di toko kami!'}
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => window.print()}
+                className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700"
+              >
+                🖨️ Cetak
+              </button>
+              <button
+                onClick={() => {
+                  setShowReceiptModal(false);
+                  setSelectedOrderForReceipt(null);
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Tutup
+              </button>
+            </div>
           </div>
         </div>
       )}

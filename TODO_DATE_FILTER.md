@@ -8,6 +8,12 @@
 - [x] 5. Update orders loading logic to use filters
 - [x] 6. Test the implementation
 
-## Files to Edit:
-1. `backend/src/controllers/orderController.js` - Add date range support
-2. `frontend/src/pages/Admin/AdminDashboard.jsx` - Add UI and logic
+## Additional Features Added:
+- [x] 7. Add "Lihat Nota" button for each order
+- [x] 8. Add receipt modal to view order details
+
+## Files Edited:
+1. `backend/src/controllers/orderController.js` - Added start_date/end_date filtering
+2. `frontend/src/pages/Admin/AdminDashboard.jsx` - Added date filter UI, handlers, and receipt modal
+
+## Status: ✅ COMPLETED
