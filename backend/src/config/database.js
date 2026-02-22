@@ -236,6 +236,23 @@ const initDatabase = async () => {
         )
       `);
 
+      // Nota settings table for receipt/invoice configuration
+      db.run(`
+        CREATE TABLE IF NOT EXISTS nota_settings (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          shop_name TEXT DEFAULT 'POSMarbLe',
+          address TEXT,
+          phone TEXT,
+          footer_text TEXT DEFAULT 'Terima kasih telah belanja di toko kami!',
+          show_logo INTEGER DEFAULT 1,
+          show_qr_code INTEGER DEFAULT 0,
+          tax_rate REAL DEFAULT 0,
+          currency TEXT DEFAULT 'IDR',
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
       console.log('SQLite database tables initialized successfully');
 
       // Create default admin user if not exists
@@ -370,6 +387,23 @@ const initDatabase = async () => {
         )
       `);
 
+      // Nota settings table for receipt/invoice configuration
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS nota_settings (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          shop_name VARCHAR(100) DEFAULT 'POSMarbLe',
+          address TEXT,
+          phone VARCHAR(20),
+          footer_text TEXT DEFAULT 'Terima kasih telah belanja di toko kami!',
+          show_logo BOOLEAN DEFAULT TRUE,
+          show_qr_code BOOLEAN DEFAULT FALSE,
+          tax_rate DECIMAL(5,2) DEFAULT 0,
+          currency VARCHAR(10) DEFAULT 'IDR',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+      `);
+
       console.log('MySQL database tables initialized successfully');
       
       const [users] = await connection.query('SELECT * FROM users WHERE username = ?', ['admin']);
@@ -391,4 +425,3 @@ const initDatabase = async () => {
 };
 
 module.exports = { pool, db, query, initDatabase, useSQLite, saveDatabase };
-

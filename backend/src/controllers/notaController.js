@@ -1,13 +1,4 @@
-const fs = require('fs');
-const path = require('path');
-
-const NOTA_FILE = path.join(__dirname, '../../data/nota.json');
-
-// Ensure data directory exists
-const dataDir = path.join(__dirname, '../../data');
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
-}
+const { query, useSQLite, saveDatabase } = require('../config/database');
 
 // Default nota settings
 const defaultNota = {
@@ -21,34 +12,100 @@ const defaultNota = {
   currency: 'IDR',
 };
 
-// Read nota settings from file
-const getNotaData = () => {
+// Ensure nota settings record exists
+const ensureNotaExists = async () => {
   try {
-    if (fs.existsSync(NOTA_FILE)) {
-      const data = fs.readFileSync(NOTA_FILE, 'utf8');
-      return { ...defaultNota, ...JSON.parse(data) };
+    const [rows] = await query('SELECT * FROM nota_settings LIMIT 1');
+    if (!rows || rows.length === 0) {
+      // Create default record
+      await query(
+        `INSERT INTO nota_settings (shop_name, address, phone, footer_text, show_logo, show_qr_code, tax_rate, currency) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          defaultNota.shop_name,
+          defaultNota.address,
+          defaultNota.phone,
+          defaultNota.footer_text,
+          defaultNota.show_logo ? 1 : 0,
+          defaultNota.show_qr_code ? 1 : 0,
+          defaultNota.tax_rate,
+          defaultNota.currency
+        ]
+      );
+      if (useSQLite) saveDatabase();
     }
   } catch (error) {
-    console.error('Error reading nota file:', error);
+    console.error('Error ensuring nota exists:', error);
+  }
+};
+
+// Read nota settings from database
+const getNotaData = async () => {
+  try {
+    await ensureNotaExists();
+    const [rows] = await query('SELECT * FROM nota_settings LIMIT 1');
+    if (rows && rows.length > 0) {
+      const row = rows[0];
+      return {
+        shop_name: row.shop_name,
+        address: row.address || '',
+        phone: row.phone || '',
+        footer_text: row.footer_text,
+        show_logo: Boolean(row.show_logo),
+        show_qr_code: Boolean(row.show_qr_code),
+        tax_rate: row.tax_rate,
+        currency: row.currency
+      };
+    }
+  } catch (error) {
+    console.error('Error reading nota from database:', error);
   }
   return defaultNota;
 };
 
-// Write nota settings to file
-const saveNotaData = (data) => {
+// Update nota settings in database
+const saveNotaData = async (data) => {
   try {
-    fs.writeFileSync(NOTA_FILE, JSON.stringify(data, null, 2), 'utf8');
-    return true;
+    await ensureNotaExists();
+    const [rows] = await query('SELECT id FROM nota_settings LIMIT 1');
+    if (rows && rows.length > 0) {
+      const id = rows[0].id;
+      await query(
+        `UPDATE nota_settings SET 
+          shop_name = ?, 
+          address = ?, 
+          phone = ?, 
+          footer_text = ?, 
+          show_logo = ?, 
+          show_qr_code = ?, 
+          tax_rate = ?, 
+          currency = ? 
+         WHERE id = ?`,
+        [
+          data.shop_name,
+          data.address,
+          data.phone,
+          data.footer_text,
+          data.show_logo ? 1 : 0,
+          data.show_qr_code ? 1 : 0,
+          data.tax_rate,
+          data.currency,
+          id
+        ]
+      );
+      if (useSQLite) saveDatabase();
+      return true;
+    }
   } catch (error) {
-    console.error('Error writing nota file:', error);
-    return false;
+    console.error('Error saving nota to database:', error);
   }
+  return false;
 };
 
 // Get nota settings
-exports.getNota = (req, res) => {
+exports.getNota = async (req, res) => {
   try {
-    const nota = getNotaData();
+    const nota = await getNotaData();
     res.json(nota);
   } catch (error) {
     console.error('Error getting nota:', error);
@@ -57,12 +114,12 @@ exports.getNota = (req, res) => {
 };
 
 // Update nota settings
-exports.updateNota = (req, res) => {
+exports.updateNota = async (req, res) => {
   try {
-    const currentNota = getNotaData();
+    const currentNota = await getNotaData();
     const updatedNota = { ...currentNota, ...req.body };
     
-    if (saveNotaData(updatedNota)) {
+    if (await saveNotaData(updatedNota)) {
       res.json(updatedNota);
     } else {
       res.status(500).json({ error: 'Failed to save nota settings' });
@@ -74,9 +131,9 @@ exports.updateNota = (req, res) => {
 };
 
 // Reset nota settings to default
-exports.resetNota = (req, res) => {
+exports.resetNota = async (req, res) => {
   try {
-    if (saveNotaData(defaultNota)) {
+    if (await saveNotaData(defaultNota)) {
       res.json(defaultNota);
     } else {
       res.status(500).json({ error: 'Failed to reset nota settings' });
@@ -86,4 +143,3 @@ exports.resetNota = (req, res) => {
     res.status(500).json({ error: 'Failed to reset nota settings' });
   }
 };
-
