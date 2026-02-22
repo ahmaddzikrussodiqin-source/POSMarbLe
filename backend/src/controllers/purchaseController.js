@@ -43,7 +43,8 @@ const purchaseController = {
         }
 
         const ingredient = ingredients[0];
-        const totalPrice = parseFloat(item.quantity) * parseFloat(item.unit_price);
+        // unit_price is treated as total price for the quantity purchased
+        const totalPrice = parseFloat(item.unit_price);
 
         // Generate purchase number
         const purchaseNumber = purchaseController.generatePurchaseNumber();
@@ -245,4 +246,3 @@ const purchaseController = {
 };
 
 module.exports = purchaseController;
-

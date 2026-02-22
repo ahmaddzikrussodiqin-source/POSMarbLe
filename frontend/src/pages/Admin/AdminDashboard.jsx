@@ -733,7 +733,7 @@ const AdminDashboard = () => {
                             />
                             <input
                               type="number"
-                              placeholder="Harga"
+                              placeholder="Harga Total"
                               value={item.unit_price}
                               onChange={(e) => updateBulkPurchaseItem(index, 'unit_price', e.target.value)}
                               className="w-28 px-3 py-2 border border-gray-300 rounded-lg text-sm"
@@ -806,7 +806,7 @@ const AdminDashboard = () => {
                               <th className="text-left py-2 px-3 text-sm">No. Pembelian</th>
                               <th className="text-left py-2 px-3 text-sm">Bahan</th>
                               <th className="text-left py-2 px-3 text-sm">Jumlah</th>
-                              <th className="text-left py-2 px-3 text-sm">Harga Satuan</th>
+                              <th className="text-left py-2 px-3 text-sm">Harga Total</th>
                               <th className="text-left py-2 px-3 text-sm">Total</th>
                               <th className="text-left py-2 px-3 text-sm">Waktu</th>
                               <th className="text-left py-2 px-3 text-sm">Aksi</th>
@@ -1847,7 +1847,8 @@ const AdminDashboard = () => {
                       <th className="text-left py-2 px-3 text-sm">No. Pembelian</th>
                       <th className="text-left py-2 px-3 text-sm">Bahan</th>
                       <th className="text-left py-2 px-3 text-sm">Jumlah</th>
-                      <th className="text-left py-2 px-3 text-sm">Harga Satuan</th>
+                        <th className="text-left py-2 px-3 text-sm">Harga Total</th>
+
                       <th className="text-left py-2 px-3 text-sm">Total</th>
                       <th className="text-left py-2 px-3 text-sm">Waktu</th>
                       <th className="text-left py-2 px-3 text-sm">Kasir</th>
@@ -1901,4 +1902,3 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
-
