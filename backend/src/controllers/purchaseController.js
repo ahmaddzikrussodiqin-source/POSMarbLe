@@ -113,21 +113,16 @@ const purchaseController = {
       const params = [];
 
       if (start_date && end_date) {
-        // For SQLite, use string comparison with date format
-        // start_date is '2026-02-20', so '2026-02-20 00:00:00' <= created_at < '2026-02-23 00:00:00'
-        const startDateTime = start_date + ' 00:00:00';
-        const endDateTime = end_date + ' 23:59:59';
-        sql += " AND p.created_at >= ? AND p.created_at <= ?";
-        params.push(startDateTime, endDateTime);
-        console.log('Date range filter:', startDateTime, 'to', endDateTime);
+        // Use SUBSTR to compare only the date portion (first 10 chars: YYYY-MM-DD)
+        sql += " AND SUBSTR(p.created_at, 1, 10) >= ? AND SUBSTR(p.created_at, 1, 10) <= ?";
+        params.push(start_date, end_date);
+        console.log('Date range filter (SUBSTR):', start_date, 'to', end_date);
       } else if (start_date) {
-        const startDateTime = start_date + ' 00:00:00';
-        sql += " AND p.created_at >= ?";
-        params.push(startDateTime);
+        sql += " AND SUBSTR(p.created_at, 1, 10) >= ?";
+        params.push(start_date);
       } else if (end_date) {
-        const endDateTime = end_date + ' 23:59:59';
-        sql += " AND p.created_at <= ?";
-        params.push(endDateTime);
+        sql += " AND SUBSTR(p.created_at, 1, 10) <= ?";
+        params.push(end_date);
       }
 
       if (ingredient_id) {
@@ -150,18 +145,14 @@ const purchaseController = {
       const countParams = [];
       
       if (start_date && end_date) {
-        const startDateTime = start_date + ' 00:00:00';
-        const endDateTime = end_date + ' 23:59:59';
-        countSql += " AND p.created_at >= ? AND p.created_at <= ?";
-        countParams.push(startDateTime, endDateTime);
+        countSql += " AND SUBSTR(p.created_at, 1, 10) >= ? AND SUBSTR(p.created_at, 1, 10) <= ?";
+        countParams.push(start_date, end_date);
       } else if (start_date) {
-        const startDateTime = start_date + ' 00:00:00';
-        countSql += " AND p.created_at >= ?";
-        countParams.push(startDateTime);
+        countSql += " AND SUBSTR(p.created_at, 1, 10) >= ?";
+        countParams.push(start_date);
       } else if (end_date) {
-        const endDateTime = end_date + ' 23:59:59';
-        countSql += " AND p.created_at <= ?";
-        countParams.push(endDateTime);
+        countSql += " AND SUBSTR(p.created_at, 1, 10) <= ?";
+        countParams.push(end_date);
       }
 
       if (ingredient_id) {
