@@ -550,7 +550,7 @@ const AdminDashboard = () => {
     { id: 'purchasing', label: 'Pembelian', icon: '🛒' },
     { id: 'products', label: 'Produk', icon: '☕' },
     { id: 'nota', label: 'Nota', icon: '🧾' },
-    { id: 'ingredients', label: 'Bahan', icon: '🧊' },
+    { id: 'ingredients', label: 'Stock', icon: '🧊' },
     { id: 'categories', label: 'Kategori', icon: '📁' },
     { id: 'orders', label: 'Pesanan', icon: '🗒️' },
   ];
