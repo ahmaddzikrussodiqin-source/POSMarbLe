@@ -442,6 +442,8 @@ const AdminDashboard = () => {
       if (purchaseFilter.endDate) {
         params.end_date = purchaseFilter.endDate;
       }
+      // Add timezone offset in minutes (e.g., WIB is UTC+7 = -420 minutes)
+      params.timezone_offset = new Date().getTimezoneOffset();
       const res = await purchasesAPI.getAll(params);
       setPurchaseHistory(res.data.purchases || res.data || []);
     } catch (error) {

@@ -100,9 +100,15 @@ const purchaseController = {
   // Get all purchases with filters
   getAll: async (req, res) => {
     try {
-      const { start_date, end_date, ingredient_id, limit = 50, offset = 0 } = req.query;
+      const { start_date, end_date, ingredient_id, limit = 50, offset = 0, timezone_offset } = req.query;
       
-      console.log('Purchase filter received:', { start_date, end_date, ingredient_id });
+      // Convert timezone offset from minutes (JavaScript) to hours for MySQL
+      // Default to WIB (UTC+7 = -420 minutes) if not provided
+      const offsetMinutes = timezone_offset ? parseInt(timezone_offset) : -420;
+      const offsetHours = Math.abs(Math.floor(offsetMinutes / 60));
+      const offsetSign = offsetMinutes < 0 ? '+' : '-'; // Negative minutes means ahead of UTC (e.g., WIB is -420, so we ADD hours)
+      
+      console.log('Purchase filter received:', { start_date, end_date, ingredient_id, timezone_offset, offsetHours, offsetSign });
       
       let sql = `
         SELECT p.*, u.name as created_by_name 
@@ -113,15 +119,15 @@ const purchaseController = {
       const params = [];
 
       if (start_date && end_date) {
-        // Convert UTC to local time (WIB/UTC+7) by adding 7 hours, then compare date portion
-        sql += " AND SUBSTR(DATE_ADD(p.created_at, INTERVAL 7 HOUR), 1, 10) >= ? AND SUBSTR(DATE_ADD(p.created_at, INTERVAL 7 HOUR), 1, 10) <= ?";
+        // Convert UTC to user's local timezone, then compare date portion
+        sql += ` AND SUBSTR(DATE_ADD(p.created_at, INTERVAL ${offsetHours} HOUR), 1, 10) >= ? AND SUBSTR(DATE_ADD(p.created_at, INTERVAL ${offsetHours} HOUR), 1, 10) <= ?`;
         params.push(start_date, end_date);
-        console.log('Date range filter (WIB):', start_date, 'to', end_date);
+        console.log('Date range filter (local timezone):', start_date, 'to', end_date, `(UTC${offsetSign}${offsetHours})`);
       } else if (start_date) {
-        sql += " AND SUBSTR(DATE_ADD(p.created_at, INTERVAL 7 HOUR), 1, 10) >= ?";
+        sql += ` AND SUBSTR(DATE_ADD(p.created_at, INTERVAL ${offsetHours} HOUR), 1, 10) >= ?`;
         params.push(start_date);
       } else if (end_date) {
-        sql += " AND SUBSTR(DATE_ADD(p.created_at, INTERVAL 7 HOUR), 1, 10) <= ?";
+        sql += ` AND SUBSTR(DATE_ADD(p.created_at, INTERVAL ${offsetHours} HOUR), 1, 10) <= ?`;
         params.push(end_date);
       }
 
@@ -149,13 +155,13 @@ const purchaseController = {
       const countParams = [];
       
       if (start_date && end_date) {
-        countSql += " AND SUBSTR(DATE_ADD(p.created_at, INTERVAL 7 HOUR), 1, 10) >= ? AND SUBSTR(DATE_ADD(p.created_at, INTERVAL 7 HOUR), 1, 10) <= ?";
+        countSql += ` AND SUBSTR(DATE_ADD(p.created_at, INTERVAL ${offsetHours} HOUR), 1, 10) >= ? AND SUBSTR(DATE_ADD(p.created_at, INTERVAL ${offsetHours} HOUR), 1, 10) <= ?`;
         countParams.push(start_date, end_date);
       } else if (start_date) {
-        countSql += " AND SUBSTR(DATE_ADD(p.created_at, INTERVAL 7 HOUR), 1, 10) >= ?";
+        countSql += ` AND SUBSTR(DATE_ADD(p.created_at, INTERVAL ${offsetHours} HOUR), 1, 10) >= ?`;
         countParams.push(start_date);
       } else if (end_date) {
-        countSql += " AND SUBSTR(DATE_ADD(p.created_at, INTERVAL 7 HOUR), 1, 10) <= ?";
+        countSql += ` AND SUBSTR(DATE_ADD(p.created_at, INTERVAL ${offsetHours} HOUR), 1, 10) <= ?`;
         countParams.push(end_date);
       }
 
