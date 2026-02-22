@@ -111,14 +111,14 @@ const purchaseController = {
       const params = [];
 
       if (start_date && end_date) {
-        sql += ' AND DATE(p.created_at) BETWEEN ? AND ?';
-        params.push(start_date, end_date);
+        sql += ' AND p.created_at >= ? AND p.created_at <= ?';
+        params.push(start_date + 'T00:00:00', end_date + 'T23:59:59');
       } else if (start_date) {
-        sql += ' AND DATE(p.created_at) >= ?';
-        params.push(start_date);
+        sql += ' AND p.created_at >= ?';
+        params.push(start_date + 'T00:00:00');
       } else if (end_date) {
-        sql += ' AND DATE(p.created_at) <= ?';
-        params.push(end_date);
+        sql += ' AND p.created_at <= ?';
+        params.push(end_date + 'T23:59:59');
       }
 
       if (ingredient_id) {
@@ -136,14 +136,14 @@ const purchaseController = {
       const countParams = [];
       
       if (start_date && end_date) {
-        countSql += ' AND DATE(p.created_at) BETWEEN ? AND ?';
-        countParams.push(start_date, end_date);
+        countSql += ' AND p.created_at >= ? AND p.created_at <= ?';
+        countParams.push(start_date + 'T00:00:00', end_date + 'T23:59:59');
       } else if (start_date) {
-        countSql += ' AND DATE(p.created_at) >= ?';
-        countParams.push(start_date);
+        countSql += ' AND p.created_at >= ?';
+        countParams.push(start_date + 'T00:00:00');
       } else if (end_date) {
-        countSql += ' AND DATE(p.created_at) <= ?';
-        countParams.push(end_date);
+        countSql += ' AND p.created_at <= ?';
+        countParams.push(end_date + 'T23:59:59');
       }
 
       if (ingredient_id) {
