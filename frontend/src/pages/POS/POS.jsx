@@ -333,8 +333,8 @@ const POS = () => {
                 <h2 className="text-xl font-bold">Keranjang</h2>
                 <p className="text-white text-sm opacity-90">{cartItemCount} item</p>
               </div>
-              <div className="bg-white bg-opacity-20 px-4 py-2 rounded-xl">
-                <span className="text-2xl font-bold text-white">{formatCurrency(cartTotal)}</span>
+              <div className="bg-white bg-opacity-30 px-4 py-2 rounded-xl border-2 border-white">
+                <span className="text-2xl font-bold text-gray-900">{formatCurrency(cartTotal)}</span>
               </div>
             </div>
           </div>
@@ -527,8 +527,8 @@ const POS = () => {
           <div className="bg-white rounded-3xl p-0 max-w-md w-full shadow-2xl overflow-hidden">
             {/* Receipt Header - Success */}
             <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-6 text-white text-center">
-              <div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-3">
-                <span className="text-3xl">✓</span>
+              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-3">
+                <span style={{color: '#16a34a', fontSize: '2rem', fontWeight: 'bold'}}>✓</span>
               </div>
               <h2 className="text-2xl font-bold">Pembayaran Berhasil!</h2>
               <p className="text-emerald-100">Terima kasih telah berbelanja</p>
