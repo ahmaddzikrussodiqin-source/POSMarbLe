@@ -662,48 +662,6 @@ const AdminDashboard = () => {
                       <p className="text-3xl font-bold text-gray-600">{formatDate(new Date())}</p>
                     </div>
                   </div>
-
-                  <div className="bg-white p-6 rounded-xl shadow">
-                    <h3 className="text-lg font-bold text-gray-800 mb-4">Pesanan Hari Ini</h3>
-                    {orders.length === 0 ? (
-                      <p className="text-gray-500">Belum ada pesanan hari ini</p>
-                    ) : (
-                      <div className="overflow-x-auto">
-                        <table className="w-full">
-                          <thead>
-                            <tr className="border-b">
-                              <th className="text-left py-3 px-4">No. Pesanan</th>
-                              <th className="text-left py-3 px-4">Total</th>
-                              <th className="text-left py-3 px-4">Metode</th>
-                              <th className="text-left py-3 px-4">Waktu</th>
-                              <th className="text-left py-3 px-4">Status</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {orders.map((order) => (
-                              <tr key={order.id} className="border-b hover:bg-gray-50">
-                                <td className="py-3 px-4">{order.order_number}</td>
-                                <td className="py-3 px-4">{formatCurrency(order.total_amount)}</td>
-                                <td className="py-3 px-4 capitalize">{order.payment_method}</td>
-                                <td className="py-3 px-4">
-                                  {formatTime(order.created_at)}
-                                </td>
-                                <td className="py-3 px-4">
-                                  <span className={`px-2 py-1 rounded-full text-xs ${
-                                    order.status === 'completed' ? 'bg-green-100 text-green-700' :
-                                    order.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                                    'bg-yellow-100 text-yellow-700'
-                                  }`}>
-                                    {order.status}
-                                  </span>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </div>
                 </div>
               )}
 
