@@ -139,6 +139,10 @@ const purchaseController = {
       const [purchases] = await query(sql, params);
       
       console.log('Found purchases:', purchases.length);
+      if (purchases.length > 0) {
+        console.log('First purchase created_at:', purchases[0].created_at);
+        console.log('Last purchase created_at:', purchases[purchases.length - 1].created_at);
+      }
 
       // Get total count
       let countSql = `SELECT COUNT(*) as count FROM purchases p WHERE 1=1`;
