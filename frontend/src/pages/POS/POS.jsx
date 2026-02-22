@@ -160,6 +160,11 @@ const POS = () => {
     return Math.round(amount * (taxRate / 100));
   };
 
+  // Handle print receipt
+  const handlePrint = () => {
+    window.print();
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 to-orange-100">
