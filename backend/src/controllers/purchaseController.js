@@ -113,15 +113,15 @@ const purchaseController = {
       const params = [];
 
       if (start_date && end_date) {
-        // Use SUBSTR to compare only the date portion (first 10 chars: YYYY-MM-DD)
-        sql += " AND SUBSTR(p.created_at, 1, 10) >= ? AND SUBSTR(p.created_at, 1, 10) <= ?";
+        // Convert UTC to local time (WIB/UTC+7) by adding 7 hours, then compare date portion
+        sql += " AND SUBSTR(datetime(p.created_at, '+7 hours'), 1, 10) >= ? AND SUBSTR(datetime(p.created_at, '+7 hours'), 1, 10) <= ?";
         params.push(start_date, end_date);
-        console.log('Date range filter (SUBSTR):', start_date, 'to', end_date);
+        console.log('Date range filter (WIB):', start_date, 'to', end_date);
       } else if (start_date) {
-        sql += " AND SUBSTR(p.created_at, 1, 10) >= ?";
+        sql += " AND SUBSTR(datetime(p.created_at, '+7 hours'), 1, 10) >= ?";
         params.push(start_date);
       } else if (end_date) {
-        sql += " AND SUBSTR(p.created_at, 1, 10) <= ?";
+        sql += " AND SUBSTR(datetime(p.created_at, '+7 hours'), 1, 10) <= ?";
         params.push(end_date);
       }
 
@@ -149,13 +149,13 @@ const purchaseController = {
       const countParams = [];
       
       if (start_date && end_date) {
-        countSql += " AND SUBSTR(p.created_at, 1, 10) >= ? AND SUBSTR(p.created_at, 1, 10) <= ?";
+        countSql += " AND SUBSTR(datetime(p.created_at, '+7 hours'), 1, 10) >= ? AND SUBSTR(datetime(p.created_at, '+7 hours'), 1, 10) <= ?";
         countParams.push(start_date, end_date);
       } else if (start_date) {
-        countSql += " AND SUBSTR(p.created_at, 1, 10) >= ?";
+        countSql += " AND SUBSTR(datetime(p.created_at, '+7 hours'), 1, 10) >= ?";
         countParams.push(start_date);
       } else if (end_date) {
-        countSql += " AND SUBSTR(p.created_at, 1, 10) <= ?";
+        countSql += " AND SUBSTR(datetime(p.created_at, '+7 hours'), 1, 10) <= ?";
         countParams.push(end_date);
       }
 
