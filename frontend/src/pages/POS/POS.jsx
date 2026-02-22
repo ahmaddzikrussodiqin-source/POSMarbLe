@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { categoriesAPI, productsAPI, ordersAPI } from '../../services/api';
+import { categoriesAPI, productsAPI, ordersAPI, notaAPI } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
 
 const POS = () => {
@@ -18,10 +18,32 @@ const POS = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [showMenuModal, setShowMenuModal] = useState(false);
+  
+  // Nota settings state
+  const [notaSettings, setNotaSettings] = useState({
+    shop_name: 'POSMarbLe',
+    address: '',
+    phone: '',
+    footer_text: 'Terima kasih telah belanja di toko kami!',
+    show_logo: true,
+    show_qr_code: false,
+    tax_rate: 0,
+    currency: 'IDR',
+  });
 
   useEffect(() => {
     loadData();
+    loadNotaSettings();
   }, []);
+
+  const loadNotaSettings = async () => {
+    try {
+      const res = await notaAPI.get();
+      setNotaSettings(res.data);
+    } catch (error) {
+      console.error('Error loading nota settings:', error);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -125,12 +147,17 @@ const POS = () => {
     }
   };
 
-  const formatCurrency = (amount) => {
+  const formatCurrency = (amount, currency = 'IDR') => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
-      currency: 'IDR',
+      currency: currency,
       minimumFractionDigits: 0,
     }).format(amount);
+  };
+
+  // Calculate tax amount
+  const calculateTax = (amount, taxRate) => {
+    return Math.round(amount * (taxRate / 100));
   };
 
   if (loading) {
@@ -494,53 +521,106 @@ const POS = () => {
         </div>
       )}
 
-      {/* Receipt Modal - Beautiful Receipt Style */}
+      {/* Receipt Modal - Using Nota Settings from Admin */}
       {showReceipt && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-3xl p-0 max-w-md w-full shadow-2xl overflow-hidden">
-            {/* Receipt Header */}
-            <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-6 text-white text-center">
+            {/* Receipt Header - Success */}
+            <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-6 text-white text-center">
               <div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-3">
                 <span className="text-3xl">✓</span>
               </div>
               <h2 className="text-2xl font-bold">Pembayaran Berhasil!</h2>
-              <p className="text-amber-100">Terima kasih telah berbelanja</p>
+              <p className="text-emerald-100">Terima kasih telah berbelanja</p>
             </div>
 
             {/* Receipt Body */}
             <div className="p-6">
+              {/* Shop Info from Nota Settings */}
               <div className="border-b-2 border-dashed border-gray-200 pb-4 mb-4">
-                <div className="text-center mb-4">
-                  <p className="text-gray-500 text-sm">Nomor Pesanan</p>
-                  <p className="font-bold text-2xl text-amber-700">{showReceipt.order_number}</p>
+                {/* Logo */}
+                {notaSettings.show_logo && (
+                  <div className="text-center mb-3">
+                    <span className="text-4xl">🏪</span>
+                  </div>
+                )}
+                
+                {/* Shop Name */}
+                <div className="text-center mb-2">
+                  <h3 className="font-bold text-lg text-gray-800">{notaSettings.shop_name || 'Toko'}</h3>
                 </div>
                 
-                <div className="space-y-2">
-                  {showReceipt.items.map((item, index) => (
-                    <div key={index} className="flex justify-between text-gray-700">
-                      <div>
-                        <span className="font-medium">{item.product_name}</span>
-                        <span className="text-gray-400 ml-2">x{item.quantity}</span>
-                      </div>
-                      <span className="font-medium">{formatCurrency(item.subtotal)}</span>
-                    </div>
-                  ))}
+                {/* Address */}
+                {notaSettings.address && (
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600">{notaSettings.address}</p>
+                  </div>
+                )}
+                
+                {/* Phone */}
+                {notaSettings.phone && (
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600">Telp: {notaSettings.phone}</p>
+                  </div>
+                )}
+                
+                {/* Order Number */}
+                <div className="text-center mt-4 pt-3 border-t border-dashed border-gray-200">
+                  <p className="text-gray-500 text-xs">Nomor Pesanan</p>
+                  <p className="font-bold text-xl text-amber-700">{showReceipt.order_number}</p>
                 </div>
               </div>
 
-              <div className="flex justify-between items-center py-3 border-b border-gray-100">
-                <span className="text-gray-600">Subtotal</span>
-                <span className="text-gray-700">{formatCurrency(showReceipt.total_amount)}</span>
-              </div>
-              <div className="flex justify-between items-center py-3 border-b border-gray-100">
-                <span className="text-gray-600">Pajak (0%)</span>
-                <span className="text-gray-700">Rp 0</span>
-              </div>
-              <div className="flex justify-between items-center py-4">
-                <span className="text-lg font-bold text-gray-800">Total</span>
-                <span className="text-2xl font-bold text-amber-700">{formatCurrency(showReceipt.total_amount)}</span>
+              {/* Items */}
+              <div className="space-y-2 mb-4">
+                {showReceipt.items.map((item, index) => (
+                  <div key={index} className="flex justify-between text-gray-700">
+                    <div>
+                      <span className="font-medium">{item.product_name}</span>
+                      <span className="text-gray-400 ml-2">x{item.quantity}</span>
+                    </div>
+                    <span className="font-medium">{formatCurrency(item.subtotal, notaSettings.currency)}</span>
+                  </div>
+                ))}
               </div>
 
+              {/* Subtotal */}
+              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                <span className="text-gray-600">Subtotal</span>
+                <span className="text-gray-700">{formatCurrency(showReceipt.total_amount, notaSettings.currency)}</span>
+              </div>
+              
+              {/* Tax - Dynamic based on nota settings */}
+              {notaSettings.tax_rate > 0 && (
+                <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                  <span className="text-gray-600">Pajak ({notaSettings.tax_rate}%)</span>
+                  <span className="text-gray-700">
+                    {formatCurrency(calculateTax(showReceipt.total_amount, notaSettings.tax_rate), notaSettings.currency)}
+                  </span>
+                </div>
+              )}
+              
+              {/* Total */}
+              <div className="flex justify-between items-center py-3">
+                <span className="text-lg font-bold text-gray-800">Total</span>
+                <div className="text-right">
+                  {notaSettings.tax_rate > 0 && (
+                    <span className="text-xs text-gray-500 block">
+                      Termasuk pajak {notaSettings.tax_rate}%
+                    </span>
+                  )}
+                  <span className="text-2xl font-bold text-amber-700">
+                    {formatCurrency(
+                      notaSettings.tax_rate > 0 
+                        ? showReceipt.total_amount + calculateTax(showReceipt.total_amount, notaSettings.tax_rate)
+                        : showReceipt.total_amount, 
+                      notaSettings.currency
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              {/* Payment Method */}
               <div className="bg-gray-50 rounded-xl p-3 text-center mt-4">
                 <p className="text-sm text-gray-500">Metode Pembayaran</p>
                 <p className="font-bold text-gray-800 capitalize">
@@ -548,10 +628,18 @@ const POS = () => {
                 </p>
               </div>
 
-              {/* Footer Message */}
-              <div className="text-center mt-6 pt-4 border-t border-gray-100">
-                <p className="text-amber-600 font-medium">POSMarbLe</p>
-                <p className="text-gray-400 text-sm">Harapan terbaik untuk hari Anda!</p>
+              {/* QR Code - Optional from nota settings */}
+              {notaSettings.show_qr_code && (
+                <div className="text-center py-3 mt-3 border-t border-dashed border-gray-200">
+                  <div className="text-3xl">📱</div>
+                  <p className="text-xs text-gray-500">Scan untuk pembayaran</p>
+                </div>
+              )}
+
+              {/* Footer Message - From nota settings */}
+              <div className="text-center mt-6 pt-3 border-t border-gray-100">
+                <p className="text-amber-600 font-medium">{notaSettings.shop_name || 'Toko'}</p>
+                <p className="text-gray-500 text-sm">{notaSettings.footer_text || 'Terima kasih atas kunjungan Anda!'}</p>
               </div>
             </div>
 
