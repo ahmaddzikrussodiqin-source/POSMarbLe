@@ -17,6 +17,8 @@ const orderController = {
       const { items, payment_method, notes } = req.body;
       const userId = req.user.id;
 
+      console.log('[Order] Creating order - userId:', userId, 'items:', items?.length, 'payment_method:', payment_method);
+
       if (!items || items.length === 0) {
         return res.status(400).json({ error: 'Order items are required' });
       }
@@ -27,8 +29,11 @@ const orderController = {
         totalAmount += item.price * item.quantity;
       }
 
+      console.log('[Order] Total amount:', totalAmount);
+
       // Generate order number
       const orderNumber = orderController.generateOrderNumber();
+      console.log('[Order] Order number:', orderNumber);
 
       // Insert order
       const [orderResult] = await query(
@@ -38,10 +43,12 @@ const orderController = {
       );
 
       const orderId = orderResult.insertId;
+      console.log('[Order] Order created with ID:', orderId);
 
       // Insert order items
       for (const item of items) {
         const subtotal = item.price * item.quantity;
+        console.log('[Order] Adding item:', item.name, 'qty:', item.quantity);
         
         await query(
           `INSERT INTO order_items (order_id, product_id, product_name, unit_price, quantity, subtotal) 
@@ -69,6 +76,12 @@ const orderController = {
         }
       }
 
+      // Save database for SQLite - IMPORTANT: persist order data
+      if (useSQLite) {
+        saveDatabase();
+        console.log('[Order] Database saved for SQLite');
+      }
+
       // Get complete order with items
       const [orders] = await query(
         `SELECT o.*, u.name as created_by_name 
@@ -83,13 +96,16 @@ const orderController = {
         [orderId]
       );
 
+      console.log('[Order] Order created successfully:', orderNumber);
+
       res.status(201).json({
         ...orders[0],
         items: orderItems
       });
     } catch (error) {
       console.error('Create order error:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      console.error('Error stack:', error.stack);
+      res.status(500).json({ error: 'Internal server error: ' + error.message });
     }
   },
 
@@ -247,6 +263,11 @@ const orderController = {
         'UPDATE orders SET status = ?, payment_status = ? WHERE id = ?',
         ['cancelled', 'cancelled', id]
       );
+
+      // Save database for SQLite - persist cancellation
+      if (useSQLite) {
+        saveDatabase();
+      }
 
       res.json({ message: 'Order cancelled successfully' });
     } catch (error) {
