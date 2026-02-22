@@ -120,5 +120,12 @@ export const appVersionAPI = {
   checkUpdate: (currentVersion) => api.post('/app/check-update', { currentVersion }),
 };
 
+// Nota API
+export const notaAPI = {
+  get: () => api.get('/nota'),
+  update: (data) => api.put('/nota', data),
+  reset: () => api.post('/nota/reset'),
+};
+
 export default api;
 

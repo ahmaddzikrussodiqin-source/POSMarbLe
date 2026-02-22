@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { categoriesAPI, productsAPI, ordersAPI, reportsAPI, ingredientsAPI, purchasesAPI } from '../../services/api';
+import { categoriesAPI, productsAPI, ordersAPI, reportsAPI, ingredientsAPI, purchasesAPI, notaAPI } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
 
 const AdminDashboard = () => {
@@ -54,6 +54,20 @@ const AdminDashboard = () => {
   const [purchaseFilter, setPurchaseFilter] = useState({ startDate: '', endDate: '' });
   const [loadingPurchaseHistory, setLoadingPurchaseHistory] = useState(false);
 
+  // Nota settings state
+  const [notaSettings, setNotaSettings] = useState({
+    shop_name: 'POSMarbLe',
+    address: '',
+    phone: '',
+    footer_text: 'Terima kasih telah belanja di toko kami!',
+    show_logo: true,
+    show_qr_code: false,
+    tax_rate: 0,
+    currency: 'IDR',
+  });
+  const [loadingNota, setLoadingNota] = useState(false);
+  const [savingNota, setSavingNota] = useState(false);
+
   useEffect(() => {
     loadData();
   }, [activeTab]);
@@ -97,6 +111,16 @@ const AdminDashboard = () => {
       } else if (activeTab === 'ingredients') {
         const res = await ingredientsAPI.getAll();
         setIngredients(res.data);
+      } else if (activeTab === 'nota') {
+        setLoadingNota(true);
+        try {
+          const res = await notaAPI.get();
+          setNotaSettings(res.data);
+        } catch (error) {
+          console.error('Error loading nota settings:', error);
+        } finally {
+          setLoadingNota(false);
+        }
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -503,11 +527,29 @@ const AdminDashboard = () => {
     }
   };
 
+  // Nota handlers
+  const handleSaveNota = async (e) => {
+    e.preventDefault();
+    setSavingNota(true);
+    try {
+      await notaAPI.update(notaSettings);
+      alert('Pengaturan Nota berhasil disimpan!');
+    } catch (error) {
+      alert(error.response?.data?.error || 'Failed to save nota settings');
+    } finally {
+      setSavingNota(false);
+    }
+  };
+
+  const handleNotaChange = (field, value) => {
+    setNotaSettings({ ...notaSettings, [field]: value });
+  };
+
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
     { id: 'purchasing', label: 'Pembelian', icon: '🛒' },
     { id: 'products', label: 'Produk', icon: '☕' },
-    { id: 'menu', label: 'Menu', icon: '📋' },
+    { id: 'nota', label: 'Nota', icon: '🧾' },
     { id: 'ingredients', label: 'Bahan', icon: '🧊' },
     { id: 'categories', label: 'Kategori', icon: '📁' },
     { id: 'orders', label: 'Pesanan', icon: '🗒️' },
@@ -1105,6 +1147,220 @@ const AdminDashboard = () => {
                       </tbody>
                     </table>
                   </div>
+                </div>
+              )}
+
+              {/* Nota */}
+              {activeTab === 'nota' && (
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-800 mb-6">Pengaturan Nota</h2>
+                  
+                  {loadingNota ? (
+                    <div className="text-center py-8">Memuat...</div>
+                  ) : (
+                    <div className="bg-white rounded-xl shadow overflow-hidden">
+                      <form onSubmit={handleSaveNota}>
+                        <div className="p-6 space-y-6">
+                          {/* Shop Info Section */}
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4">Informasi Toko</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  Nama Toko
+                                </label>
+                                <input
+                                  type="text"
+                                  value={notaSettings.shop_name}
+                                  onChange={(e) => handleNotaChange('shop_name', e.target.value)}
+                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                                  placeholder="Nama toko Anda"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  No. Telepon
+                                </label>
+                                <input
+                                  type="text"
+                                  value={notaSettings.phone}
+                                  onChange={(e) => handleNotaChange('phone', e.target.value)}
+                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                                  placeholder="Nomor telepon"
+                                />
+                              </div>
+                              <div className="md:col-span-2">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  Alamat
+                                </label>
+                                <textarea
+                                  value={notaSettings.address}
+                                  onChange={(e) => handleNotaChange('address', e.target.value)}
+                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                                  rows="2"
+                                  placeholder="Alamat toko Anda"
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Display Options Section */}
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4">Opsi Tampilan</h3>
+                            <div className="space-y-3">
+                              <label className="flex items-center gap-3 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={notaSettings.show_logo}
+                                  onChange={(e) => handleNotaChange('show_logo', e.target.checked)}
+                                  className="w-5 h-5 text-amber-600 rounded focus:ring-amber-500"
+                                />
+                                <span className="text-gray-700">Tampilkan logo toko</span>
+                              </label>
+                              <label className="flex items-center gap-3 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={notaSettings.show_qr_code}
+                                  onChange={(e) => handleNotaChange('show_qr_code', e.target.checked)}
+                                  className="w-5 h-5 text-amber-600 rounded focus:ring-amber-500"
+                                />
+                                <span className="text-gray-700">Tampilkan QR Code pembayaran</span>
+                              </label>
+                            </div>
+                          </div>
+
+                          {/* Tax & Currency Section */}
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4">Pajak & Mata Uang</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  Mata Uang
+                                </label>
+                                <select
+                                  value={notaSettings.currency}
+                                  onChange={(e) => handleNotaChange('currency', e.target.value)}
+                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                                >
+                                  <option value="IDR">IDR (Rupiah)</option>
+                                  <option value="USD">USD (Dollar)</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  Tarif Pajak (%)
+                                </label>
+                                <input
+                                  type="number"
+                                  value={notaSettings.tax_rate}
+                                  onChange={(e) => handleNotaChange('tax_rate', parseFloat(e.target.value) || 0)}
+                                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                                  min="0"
+                                  max="100"
+                                  step="0.1"
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Footer Text Section */}
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4">Teks Footer Nota</h3>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Pesan Terima Kasih
+                              </label>
+                              <textarea
+                                value={notaSettings.footer_text}
+                                onChange={(e) => handleNotaChange('footer_text', e.target.value)}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                                rows="3"
+                                placeholder="Pesan yang muncul di bawah nota"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Preview Section */}
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-800 mb-4">Pratinjau Nota</h3>
+                            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                              <div className="text-center border-b pb-3 mb-3">
+                                {notaSettings.show_logo && (
+                                  <div className="text-3xl mb-2">🏪</div>
+                                )}
+                                <h4 className="font-bold text-lg">{notaSettings.shop_name || 'Nama Toko'}</h4>
+                                {notaSettings.address && (
+                                  <p className="text-sm text-gray-600">{notaSettings.address}</p>
+                                )}
+                                {notaSettings.phone && (
+                                  <p className="text-sm text-gray-600">Telp: {notaSettings.phone}</p>
+                                )}
+                              </div>
+                              <div className="text-sm space-y-1 border-b pb-3 mb-3">
+                                <div className="flex justify-between">
+                                  <span>Produk 1</span>
+                                  <span>Rp 10.000</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>Produk 2</span>
+                                  <span>Rp 15.000</span>
+                                </div>
+                              </div>
+                              <div className="text-sm space-y-1 border-b pb-3 mb-3">
+                                <div className="flex justify-between font-semibold">
+                                  <span>Total</span>
+                                  <span>Rp 25.000</span>
+                                </div>
+                                {notaSettings.tax_rate > 0 && (
+                                  <div className="flex justify-between text-gray-600">
+                                    <span>Pajak ({notaSettings.tax_rate}%)</span>
+                                    <span>Rp 2.500</span>
+                                  </div>
+                                )}
+                              </div>
+                              {notaSettings.show_qr_code && (
+                                <div className="text-center py-2 border-b pb-3 mb-3">
+                                  <div className="text-2xl">📱</div>
+                                  <p className="text-xs text-gray-500">Scan untuk pembayaran</p>
+                                </div>
+                              )}
+                              <div className="text-center text-sm text-gray-600 italic">
+                                {notaSettings.footer_text || 'Terima kasih atas kunjungan Anda!'}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="px-6 py-4 bg-gray-50 border-t flex justify-end gap-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNotaSettings({
+                                shop_name: 'POSMarbLe',
+                                address: '',
+                                phone: '',
+                                footer_text: 'Terima kasih telah belanja di toko kami!',
+                                show_logo: true,
+                                show_qr_code: false,
+                                tax_rate: 0,
+                                currency: 'IDR',
+                              });
+                            }}
+                            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100"
+                          >
+                            Reset ke Default
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={savingNota}
+                            className="px-6 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50"
+                          >
+                            {savingNota ? 'Menyimpan...' : 'Simpan Perubahan'}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
                 </div>
               )}
             </>

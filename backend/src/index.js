@@ -13,6 +13,7 @@ const userRoutes = require('./routes/users');
 const ingredientRoutes = require('./routes/ingredients');
 const purchaseRoutes = require('./routes/purchases');
 const appRoutes = require('./routes/app');
+const notaRoutes = require('./routes/nota');
 const { initDatabase } = require('./config/database');
 
 const app = express();
@@ -40,6 +41,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/ingredients', ingredientRoutes);
 app.use('/api/purchases', purchaseRoutes);
 app.use('/api/app', appRoutes);
+app.use('/api/nota', notaRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
