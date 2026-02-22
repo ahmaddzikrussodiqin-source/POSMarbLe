@@ -392,9 +392,9 @@ const initDatabase = async () => {
         CREATE TABLE IF NOT EXISTS nota_settings (
           id INT AUTO_INCREMENT PRIMARY KEY,
           shop_name VARCHAR(100) DEFAULT 'POSMarbLe',
-          address TEXT,
+          address VARCHAR(255),
           phone VARCHAR(20),
-          footer_text TEXT DEFAULT 'Terima kasih telah belanja di toko kami!',
+          footer_text VARCHAR(255) DEFAULT 'Terima kasih telah belanja di toko kami!',
           show_logo BOOLEAN DEFAULT TRUE,
           show_qr_code BOOLEAN DEFAULT FALSE,
           tax_rate DECIMAL(5,2) DEFAULT 0,
