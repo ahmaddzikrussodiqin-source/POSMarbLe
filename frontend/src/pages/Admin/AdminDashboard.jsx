@@ -501,13 +501,14 @@ const AdminDashboard = () => {
     }
   };
 
-  const tabs = [
+const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
     { id: 'purchasing', label: 'Pembelian', icon: '🛒' },
     { id: 'products', label: 'Produk', icon: '☕' },
+    { id: 'menu', label: 'Menu', icon: '📋' },
     { id: 'ingredients', label: 'Bahan', icon: '🧊' },
     { id: 'categories', label: 'Kategori', icon: '📁' },
-    { id: 'orders', label: 'Pesanan', icon: '📋' },
+    { id: 'orders', label: 'Pesanan', icon: '🗒️' },
   ];
 
   return (
@@ -889,7 +890,7 @@ const AdminDashboard = () => {
                 </div>
               )}
 
-              {/* Products */}
+{/* Products */}
               {activeTab === 'products' && (
                 <div>
                   <div className="flex justify-between items-center mb-6">
@@ -981,9 +982,69 @@ const AdminDashboard = () => {
                     </table>
                   </div>
                 </div>
+)}
+
+              {/* Menu - Panduan untuk kasir */}
+              {activeTab === 'menu' && (
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-800 mb-6">Menu</h2>
+                  
+                  <div className="bg-white p-6 rounded-xl shadow mb-6">
+                    <h3 className="text-lg font-bold text-gray-800 mb-4">Panduan Menu POS</h3>
+                    <p className="text-gray-600 mb-4">
+                      Menu ini berisi informasi tentang cara menggunakan sistem POS MarbLe untuk kasir.
+                    </p>
+                    
+                    <div className="space-y-4">
+                      <div className="flex gap-4 items-start p-4 bg-amber-50 rounded-lg">
+                        <div className="w-10 h-10 bg-amber-200 rounded-full flex items-center justify-center flex-shrink-0">
+                          <span className="text-amber-700 font-bold">1</span>
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-800">Pilih Produk</h4>
+                          <p className="text-gray-600 text-sm">Ketika ada pembeli, kasir memilih produk yang akan dibeli dari daftar menu yang tersedia.</p>
+                        </div>
+
+                      <div className="flex gap-4 items-start p-4 bg-orange-50 rounded-lg">
+                        <div className="w-10 h-10 bg-orange-200 rounded-full flex items-center justify-center flex-shrink-0">
+                          <span className="text-orange-700 font-bold">2</span>
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-800">Tambah ke Keranjang</h4>
+                          <p className="text-gray-600 text-sm">Produk yang dipilih masuk ke keranjang. Kasir dapat mengatur jumlah produk sesuai pesanan.</p>
+                        </div>
+
+                      <div className="flex gap-4 items-start p-4 bg-red-50 rounded-lg">
+                        <div className="w-10 h-10 bg-red-200 rounded-full flex items-center justify-center flex-shrink-0">
+                          <span className="text-red-700 font-bold">3</span>
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-800">Pembayaran</h4>
+                          <p className="text-gray-600 text-sm">Kasir memilih metode pembayaran (Tunai, QRIS, atau Debit) dan menyelesaikan pembayaran.</p>
+                        </div>
+
+                      <div className="flex gap-4 items-start p-4 bg-green-50 rounded-lg">
+                        <div className="w-10 h-10 bg-green-200 rounded-full flex items-center justify-center flex-shrink-0">
+                          <span className="text-green-700 font-bold">4</span>
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-800">Cetak Nota</h4>
+                          <p className="text-gray-600 text-sm">Setelah pembayaran berhasil, sistem akan otomatis mencetak nota sebagai bukti transaksi.</p>
+                        </div>
+                    </div>
+
+                    <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <h4 className="font-semibold text-blue-800 mb-2">Tips untuk Kasir:</h4>
+                      <ul className="list-disc list-inside text-blue-700 text-sm space-y-1">
+                        <li>Gunakan fitur pencarian untuk menemukan produk dengan cepat</li>
+                        <li>Periksa kembali pesanan sebelum menyelesaikan pembayaran</li>
+                        <li>Pastikan stok produk cukup sebelum menginput pesanan</li>
+                      </ul>
+                    </div>
+                </div>
               )}
 
-              {/* Ingredients */}
+{/* Ingredients */}
               {activeTab === 'ingredients' && (
                 <div>
                   <div className="flex justify-between items-center mb-6">
