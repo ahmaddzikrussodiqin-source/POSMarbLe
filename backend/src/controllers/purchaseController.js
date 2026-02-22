@@ -113,16 +113,21 @@ const purchaseController = {
       const params = [];
 
       if (start_date && end_date) {
-        // For SQLite, use datetime function to properly compare dates
-        sql += " AND datetime(p.created_at) >= datetime(?, 'start of day') AND datetime(p.created_at) < datetime(?, '+1 day', 'start of day')";
-        params.push(start_date, end_date);
-        console.log('Date range filter:', start_date, 'to', end_date);
+        // For SQLite, use string comparison with date format
+        // start_date is '2026-02-20', so '2026-02-20 00:00:00' <= created_at < '2026-02-23 00:00:00'
+        const startDateTime = start_date + ' 00:00:00';
+        const endDateTime = end_date + ' 23:59:59';
+        sql += " AND p.created_at >= ? AND p.created_at <= ?";
+        params.push(startDateTime, endDateTime);
+        console.log('Date range filter:', startDateTime, 'to', endDateTime);
       } else if (start_date) {
-        sql += " AND datetime(p.created_at) >= datetime(?, 'start of day')";
-        params.push(start_date);
+        const startDateTime = start_date + ' 00:00:00';
+        sql += " AND p.created_at >= ?";
+        params.push(startDateTime);
       } else if (end_date) {
-        sql += " AND datetime(p.created_at) < datetime(?, '+1 day', 'start of day')";
-        params.push(end_date);
+        const endDateTime = end_date + ' 23:59:59';
+        sql += " AND p.created_at <= ?";
+        params.push(endDateTime);
       }
 
       if (ingredient_id) {
@@ -145,14 +150,18 @@ const purchaseController = {
       const countParams = [];
       
       if (start_date && end_date) {
-        countSql += " AND datetime(p.created_at) >= datetime(?, 'start of day') AND datetime(p.created_at) < datetime(?, '+1 day', 'start of day')";
-        countParams.push(start_date, end_date);
+        const startDateTime = start_date + ' 00:00:00';
+        const endDateTime = end_date + ' 23:59:59';
+        countSql += " AND p.created_at >= ? AND p.created_at <= ?";
+        countParams.push(startDateTime, endDateTime);
       } else if (start_date) {
-        countSql += " AND datetime(p.created_at) >= datetime(?, 'start of day')";
-        countParams.push(start_date);
+        const startDateTime = start_date + ' 00:00:00';
+        countSql += " AND p.created_at >= ?";
+        countParams.push(startDateTime);
       } else if (end_date) {
-        countSql += " AND datetime(p.created_at) < datetime(?, '+1 day', 'start of day')";
-        countParams.push(end_date);
+        const endDateTime = end_date + ' 23:59:59';
+        countSql += " AND p.created_at <= ?";
+        countParams.push(endDateTime);
       }
 
       if (ingredient_id) {
