@@ -507,9 +507,10 @@ const AdminDashboard = () => {
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
     { id: 'purchasing', label: 'Pembelian', icon: '🛒' },
     { id: 'products', label: 'Produk', icon: '☕' },
+    { id: 'menu', label: 'Menu', icon: '📋' },
     { id: 'ingredients', label: 'Bahan', icon: '🧊' },
     { id: 'categories', label: 'Kategori', icon: '📁' },
-    { id: 'orders', label: 'Pesanan', icon: '📋' },
+    { id: 'orders', label: 'Pesanan', icon: '🗒️' },
   ];
 
   return (
