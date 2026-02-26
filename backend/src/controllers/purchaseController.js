@@ -84,15 +84,27 @@ const purchaseController = {
         console.log('Purchase insert result:', purchaseResult);
 
         // Update ingredient stock (add to existing stock)
-        const newStock = (ingredient.stock || 0) + quantity;
-        console.log('Updating stock - old:', ingredient.stock, 'adding:', quantity, 'new:', newStock);
+        const currentStock = parseFloat(ingredient.stock) || 0;
+        const newStock = currentStock + quantity;
+        console.log('Updating stock - current:', currentStock, 'adding:', quantity, 'new:', newStock);
         
-        const [updateResult] = await query(
-          'UPDATE ingredients SET stock = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-          [newStock, item.ingredient_id]
-        );
-
-        console.log('Stock update result:', updateResult);
+        try {
+          const [updateResult] = await query(
+            'UPDATE ingredients SET stock = ? WHERE id = ?',
+            [newStock, item.ingredient_id]
+          );
+          console.log('Stock update result:', updateResult);
+          
+          // Verify the update
+          const [verifyStock] = await query(
+            'SELECT stock FROM ingredients WHERE id = ?',
+            [item.ingredient_id]
+          );
+          console.log('Verified stock after update:', verifyStock);
+        } catch (updateError) {
+          console.error('Error updating stock:', updateError);
+          throw updateError;
+        }
 
         // Get the created purchase
         const [newPurchases] = await query(
