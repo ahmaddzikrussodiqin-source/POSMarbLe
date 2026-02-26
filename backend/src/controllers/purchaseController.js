@@ -17,13 +17,19 @@ const purchaseController = {
       const { items, notes } = req.body;
       const userId = req.user.id;
 
+      console.log('=== CREATE BULK PURCHASE START ===');
+      console.log('Request body:', JSON.stringify({ items, notes }));
+      console.log('User ID:', userId);
+
       if (!items || items.length === 0) {
         return res.status(400).json({ error: 'Purchase items are required' });
       }
 
       // Validate all items have required fields
       for (const item of items) {
+        console.log('Validating item:', item);
         if (!item.ingredient_id || !item.quantity || item.quantity <= 0 || !item.unit_price || item.unit_price <= 0) {
+          console.log('Validation failed for item:', item);
           return res.status(400).json({ error: 'Each item must have ingredient_id, quantity ( > 0), and unit_price ( > 0)' });
         }
       }
@@ -32,19 +38,28 @@ const purchaseController = {
 
       // Process each purchase item
       for (const item of items) {
+        console.log('Processing purchase item:', item);
+        
         // Get ingredient details
         const [ingredients] = await query(
           'SELECT * FROM ingredients WHERE id = ?',
           [item.ingredient_id]
         );
 
+        console.log('Found ingredients:', ingredients);
+
         if (!ingredients || ingredients.length === 0) {
           return res.status(404).json({ error: `Ingredient with ID ${item.ingredient_id} not found` });
         }
 
         const ingredient = ingredients[0];
+        console.log('Current ingredient stock:', ingredient.stock, 'unit:', ingredient.unit);
+        
         // unit_price is treated as total price for the quantity purchased
         const totalPrice = parseFloat(item.unit_price);
+        const quantity = parseFloat(item.quantity);
+
+        console.log('Parsed values - quantity:', quantity, 'totalPrice:', totalPrice);
 
         // Generate purchase number
         const purchaseNumber = purchaseController.generatePurchaseNumber();
@@ -57,7 +72,7 @@ const purchaseController = {
             purchaseNumber,
             item.ingredient_id,
             ingredient.name,
-            parseFloat(item.quantity),
+            quantity,
             ingredient.unit,
             parseFloat(item.unit_price),
             totalPrice,
@@ -66,12 +81,18 @@ const purchaseController = {
           ]
         );
 
+        console.log('Purchase insert result:', purchaseResult);
+
         // Update ingredient stock (add to existing stock)
-        const newStock = (ingredient.stock || 0) + parseFloat(item.quantity);
-        await query(
+        const newStock = (ingredient.stock || 0) + quantity;
+        console.log('Updating stock - old:', ingredient.stock, 'adding:', quantity, 'new:', newStock);
+        
+        const [updateResult] = await query(
           'UPDATE ingredients SET stock = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
           [newStock, item.ingredient_id]
         );
+
+        console.log('Stock update result:', updateResult);
 
         // Get the created purchase
         const [newPurchases] = await query(
@@ -84,8 +105,11 @@ const purchaseController = {
         }
       }
 
-      // Save database after all purchases
+      // Save database after all purchases (for SQLite)
       saveDatabase();
+
+      console.log('=== CREATE BULK PURCHASE SUCCESS ===');
+      console.log('Created purchases count:', createdPurchases.length);
 
       res.status(201).json({
         message: `Successfully created ${createdPurchases.length} purchase(s)`,

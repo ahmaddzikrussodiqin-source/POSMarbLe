@@ -57,6 +57,11 @@ const AdminDashboard = () => {
   const [selectedOrderForReceipt, setSelectedOrderForReceipt] = useState(null);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
 
+  // Month selector state
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [showMonthSelector, setShowMonthSelector] = useState(false);
+
   // Nota settings state
   const [notaSettings, setNotaSettings] = useState({
     shop_name: 'POSMarbLe',
@@ -73,16 +78,24 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     loadData();
-  }, [activeTab]);
+  }, [activeTab, selectedMonth, selectedYear]);
 
   const loadData = async () => {
     setLoading(true);
     try {
+      // Calculate start and end dates for selected month
+      const startDate = new Date(selectedYear, selectedMonth, 1);
+      const endDate = new Date(selectedYear, selectedMonth + 1, 0);
+      const monthParams = {
+        start_date: startDate.toISOString().split('T')[0],
+        end_date: endDate.toISOString().split('T')[0],
+      };
+
       if (activeTab === 'dashboard') {
         const [ordersRes, summaryRes, financialRes] = await Promise.all([
-          ordersAPI.getToday(),
-          reportsAPI.getSalesSummary({}),
-          reportsAPI.getFinancialSummary({}),
+          ordersAPI.getAll(monthParams),
+          reportsAPI.getSalesSummary(monthParams),
+          reportsAPI.getFinancialSummary(monthParams),
         ]);
         setOrders(ordersRes.data);
         setSummary(summaryRes.data);
@@ -90,8 +103,8 @@ const AdminDashboard = () => {
       } else if (activeTab === 'purchasing') {
         const [ingredientsRes, purchasesRes, financialRes] = await Promise.all([
           ingredientsAPI.getAll(),
-          purchasesAPI.getToday(),
-          reportsAPI.getFinancialSummary({}),
+          purchasesAPI.getAll(monthParams),
+          reportsAPI.getFinancialSummary(monthParams),
         ]);
         setIngredients(ingredientsRes.data);
         setPurchases(purchasesRes.data);
@@ -162,6 +175,30 @@ const AdminDashboard = () => {
     const month = monthNames[d.getMonth()];
     const year = d.getFullYear();
     return `${day} ${month} ${year}`;
+  };
+
+  // Format month-year to "February 2026" format
+  const formatMonthYear = (month, year) => {
+    const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
+                       'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    return `${monthNames[month]} ${year}`;
+  };
+
+  // Handle month selection
+  const handleMonthSelect = (month, year) => {
+    setSelectedMonth(month);
+    setSelectedYear(year);
+    setShowMonthSelector(false);
+  };
+
+  // Generate array of years for selector (current year - 5 to current year + 1)
+  const getYearOptions = () => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let y = currentYear - 5; y <= currentYear + 1; y++) {
+      years.push(y);
+    }
+    return years;
   };
 
   // Format datetime to "20 February 2026, 10:30" format
@@ -400,10 +437,21 @@ const AdminDashboard = () => {
   const handleBulkPurchase = async (e) => {
     e.preventDefault();
     
-    // Validate all items
-    const validItems = bulkPurchaseItems.filter(item => 
-      item.ingredient_id && item.quantity > 0 && item.unit_price > 0
-    );
+    // Validate all items - ensure quantities and prices are numbers
+    const validItems = bulkPurchaseItems
+      .filter(item => 
+        item.ingredient_id && 
+        parseFloat(item.quantity) > 0 && 
+        parseFloat(item.unit_price) > 0
+      )
+      .map(item => ({
+        ingredient_id: parseInt(item.ingredient_id),
+        quantity: parseFloat(item.quantity),
+        unit_price: parseFloat(item.unit_price)
+      }));
+    
+    console.log('Bulk purchase - validItems:', validItems);
+    console.log('Original items:', bulkPurchaseItems);
     
     if (validItems.length === 0) {
       alert('Masukkan minimal 1 item pembelian yang valid');
@@ -411,16 +459,21 @@ const AdminDashboard = () => {
     }
     
     try {
+      console.log('Sending bulk purchase request:', { items: validItems, notes: purchaseNotes });
       const response = await purchasesAPI.createBulk({
         items: validItems,
         notes: purchaseNotes
       });
+      
+      console.log('Bulk purchase response:', response.data);
       
       alert(`Pembelian berhasil! ${response.data.purchases.length} item telah ditambahkan.`);
       setBulkPurchaseItems([]);
       setPurchaseNotes('');
       loadData();
     } catch (error) {
+      console.error('Bulk purchase error:', error);
+      console.error('Error response:', error.response?.data);
       alert(error.response?.data?.error || 'Gagal melakukan pembelian');
     }
   };
@@ -657,9 +710,13 @@ const AdminDashboard = () => {
                         {formatCurrency(financialSummary.profit)}
                       </p>
                     </div>
-                    <div className="bg-white p-6 rounded-xl shadow">
-                      <p className="text-gray-500 text-sm">Tanggal</p>
-                      <p className="text-3xl font-bold text-gray-600">{formatDate(new Date())}</p>
+                    <div 
+                      className="bg-white p-6 rounded-xl shadow cursor-pointer hover:bg-amber-50 transition"
+                      onClick={() => setShowMonthSelector(true)}
+                    >
+                      <p className="text-gray-500 text-sm">Periode</p>
+                      <p className="text-3xl font-bold text-amber-600">{formatMonthYear(selectedMonth, selectedYear)}</p>
+                      <p className="text-xs text-gray-400 mt-1">Klik untuk ubah</p>
                     </div>
                   </div>
                 </div>
@@ -1914,6 +1971,63 @@ const AdminDashboard = () => {
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
               >
                 Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Month Selector Modal */}
+      {showMonthSelector && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">Pilih Periode</h3>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Tahun</label>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+              >
+                {getYearOptions().map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Bulan</label>
+              <div className="grid grid-cols-3 gap-2">
+                {['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
+                  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'].map((monthName, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleMonthSelect(index, selectedYear)}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
+                      selectedMonth === index 
+                        ? 'bg-amber-600 text-white' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-amber-100'
+                    }`}
+                  >
+                    {monthName}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowMonthSelector(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Batal
+              </button>
+              <button
+                onClick={() => handleMonthSelect(selectedMonth, selectedYear)}
+                className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700"
+              >
+                Terapkan
               </button>
             </div>
           </div>
