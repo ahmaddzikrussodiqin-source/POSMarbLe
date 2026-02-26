@@ -107,7 +107,9 @@ const AdminDashboard = () => {
           reportsAPI.getFinancialSummary(monthParams),
         ]);
         setIngredients(ingredientsRes.data);
-        setPurchases(purchasesRes.data);
+        // Handle purchases API response - it returns { purchases: [], total: 0 }
+        const purchasesData = purchasesRes.data?.purchases || purchasesRes.data || [];
+        setPurchases(purchasesData);
         setFinancialSummary(financialRes.data);
       } else if (activeTab === 'categories') {
         const res = await categoriesAPI.getAll();
