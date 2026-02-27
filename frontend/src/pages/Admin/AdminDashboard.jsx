@@ -457,3 +457,266 @@ const AdminDashboard = () => {
                             </tr>
                           ))}
                         </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Purchasing Tab */}
+              {activeTab === 'purchasing' && (
+                <div>
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-2xl font-bold text-gray-800">Manajemen Pembelian</h2>
+                    <div className="bg-white px-4 py-2 rounded-lg shadow cursor-pointer hover:bg-amber-50 transition flex items-center gap-2" onClick={() => setShowMonthSelector(true)}>
+                      <span className="text-gray-500">Periode:</span>
+                      <span className="font-bold text-amber-600">{formatMonthYear(selectedMonth, selectedYear)}</span>
+                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                    </div>
+                  </div>
+
+                  {/* Financial Summary Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div className="bg-white p-6 rounded-xl shadow">
+                      <div className="flex items-center justify-between">
+                        <div><p className="text-gray-500 text-sm">Uang Keluar</p><p className="text-2xl font-bold text-red-600">{formatCurrency(financialSummary.money_out)}</p></div>
+                        <div className="bg-red-100 p-3 rounded-full"><span className="text-2xl">🛒</span></div>
+                      </div>
+                    </div>
+                    <div className="bg-white p-6 rounded-xl shadow">
+                      <div className="flex items-center justify-between">
+                        <div><p className="text-gray-500 text-sm">Total Pembelian</p><p className="text-2xl font-bold text-blue-600">{purchases.length}</p></div>
+                        <div className="bg-blue-100 p-3 rounded-full"><span className="text-2xl">📦</span></div>
+                      </div>
+                    </div>
+                    <div className="bg-white p-6 rounded-xl shadow">
+                      <div className="flex items-center justify-between">
+                        <div><p className="text-gray-500 text-sm">Sisa Laba</p><p className={`text-2xl font-bold ${financialSummary.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(financialSummary.profit)}</p></div>
+                        <div className={`p-3 rounded-full ${financialSummary.profit >= 0 ? 'bg-green-100' : 'bg-red-100'}`}><span className="text-2xl">{financialSummary.profit >= 0 ? '💰' : '⚠️'}</span></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bulk Purchase Form */}
+                  <div className="bg-white p-6 rounded-xl shadow mb-8">
+                    <h3 className="text-lg font-bold text-gray-800 mb-4">Pembelian Bahan Baku</h3>
+                    <form onSubmit={handleBulkPurchase}>
+                      {bulkPurchaseItems.map((item, index) => (
+                        <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 items-end">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Bahan</label>
+                            <select value={item.ingredient_id} onChange={(e) => updateBulkPurchaseItem(index, 'ingredient_id', e.target.value)} className="w-full border rounded-lg px-3 py-2" required>
+                              <option value="">Pilih Bahan</option>
+                              {ingredients.map((ing) => (<option key={ing.id} value={ing.id}>{ing.name} ({ing.unit})</option>))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Jumlah</label>
+                            <input type="number" step="0.01" value={item.quantity} onChange={(e) => updateBulkPurchaseItem(index, 'quantity', e.target.value)} className="w-full border rounded-lg px-3 py-2" placeholder="Jumlah" required />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Harga Satuan</label>
+                            <input type="number" step="0.01" value={item.unit_price} onChange={(e) => updateBulkPurchaseItem(index, 'unit_price', e.target.value)} className="w-full border rounded-lg px-3 py-2" placeholder="Harga per unit" required />
+                          </div>
+                          <div>
+                            <button type="button" onClick={() => removeBulkPurchaseItem(index)} className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">Hapus</button>
+                          </div>
+                        </div>
+                      ))}
+                      <div className="flex gap-4 mb-4">
+                        <button type="button" onClick={addBulkPurchaseItem} className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition">+ Tambah Item</button>
+                      </div>
+                      <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Catatan</label>
+                        <textarea value={purchaseNotes} onChange={(e) => setPurchaseNotes(e.target.value)} className="w-full border rounded-lg px-3 py-2" rows="2" placeholder="Catatan pembelian (opsional)"></textarea>
+                      </div>
+                      <button type="submit" className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition">Simpan Pembelian</button>
+                    </form>
+                  </div>
+
+                  {/* Ingredients Stock */}
+                  <div className="bg-white p-6 rounded-xl shadow mb-8">
+                    <h3 className="text-lg font-bold text-gray-800 mb-4">Stok Bahan Baku</h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr><th className="text-left py-3 px-4">Nama</th><th className="text-left py-3 px-4">Stok</th><th className="text-left py-3 px-4">Unit</th><th className="text-left py-3 px-4">Aksi</th></tr>
+                        </thead>
+                        <tbody>
+                          {ingredients.map((ing) => (
+                            <tr key={ing.id} className="border-b hover:bg-gray-50">
+                              <td className="py-3 px-4">{ing.name}</td>
+                              <td className="py-3 px-4">{ing.stock}</td>
+                              <td className="py-3 px-4">{ing.unit}</td>
+                              <td className="py-3 px-4"><button onClick={() => handleOpenPurchaseModal(ing)} className="text-green-600 hover:text-green-800 text-sm font-medium">Tambah Stok</button></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Purchase History */}
+                  <div className="bg-white p-6 rounded-xl shadow">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-bold text-gray-800">Riwayat Pembelian</h3>
+                      <button onClick={() => { setShowPurchaseHistoryModal(true); loadPurchaseHistory(); }} className="text-amber-600 hover:text-amber-800 text-sm font-medium">Lihat Semua</button>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr><th className="text-left py-3 px-4">Tanggal</th><th className="text-left py-3 px-4">Bahan</th><th className="text-left py-3 px-4">Jumlah</th><th className="text-left py-3 px-4">Total</th></tr>
+                        </thead>
+                        <tbody>
+                          {purchases.slice(0, 5).map((purchase) => (
+                            <tr key={purchase.id} className="border-b hover:bg-gray-50">
+                              <td className="py-3 px-4">{formatDate(purchase.created_at)}</td>
+                              <td className="py-3 px-4">{purchase.ingredient_name}</td>
+                              <td className="py-3 px-4">{purchase.quantity} {purchase.unit}</td>
+                              <td className="py-3 px-4">{formatCurrency(purchase.total_price)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Other tabs placeholder */}
+              {activeTab !== 'dashboard' && activeTab !== 'purchasing' && (
+                <div className="bg-white p-6 rounded-xl shadow">
+                  <h2 className="text-2xl font-bold text-gray-800 mb-4">{tabs.find(t => t.id === activeTab)?.label}</h2>
+                  <p className="text-gray-600">Fitur ini sedang dalam pengembangan.</p>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Month Selector Modal */}
+          {showMonthSelector && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white p-6 rounded-xl shadow-lg max-w-md w-full">
+                <h3 className="text-lg font-bold text-gray-800 mb-4">Pilih Periode</h3>
+                <div className="grid grid-cols-3 gap-2 mb-4">
+                  {['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'].map((month, index) => (
+                    <button key={index} onClick={() => handleMonthSelect(index, selectedYear)} className={`p-2 rounded-lg text-sm ${selectedMonth === index ? 'bg-amber-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}>{month}</button>
+                  ))}
+                </div>
+                <div className="flex gap-2 mb-4 overflow-x-auto">
+                  {getYearOptions().map((year) => (
+                    <button key={year} onClick={() => setSelectedYear(year)} className={`p-2 rounded-lg text-sm ${selectedYear === year ? 'bg-amber-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}>{year}</button>
+                  ))}
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button onClick={() => setShowMonthSelector(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Batal</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Purchase Modal */}
+          {showPurchaseModal && selectedIngredientForPurchase && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white p-6 rounded-xl shadow-lg max-w-md w-full">
+                <h3 className="text-lg font-bold text-gray-800 mb-4">Tambah Stok: {selectedIngredientForPurchase.name}</h3>
+                <form onSubmit={handlePurchase}>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Jumlah ({selectedIngredientForPurchase.unit})</label>
+                    <input type="number" step="0.01" value={purchaseForm.quantity} onChange={(e) => setPurchaseForm({ ...purchaseForm, quantity: e.target.value })} className="w-full border rounded-lg px-3 py-2" placeholder={`Masukkan jumlah dalam ${selectedIngredientForPurchase.unit}`} required />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <button type="button" onClick={() => setShowPurchaseModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Batal</button>
+                    <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Simpan</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Receipt Modal */}
+          {showReceiptModal && selectedOrderForReceipt && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white p-6 rounded-xl shadow-lg max-w-md w-full">
+                <div className="text-center mb-4">
+                  <h3 className="text-lg font-bold">{notaSettings.shop_name}</h3>
+                  <p className="text-sm text-gray-600">{notaSettings.address}</p>
+                  <p className="text-sm text-gray-600">{notaSettings.phone}</p>
+                </div>
+                <div className="border-t border-b py-4 mb-4">
+                  <p className="text-sm"><strong>No:</strong> {selectedOrderForReceipt.order_number}</p>
+                  <p className="text-sm"><strong>Tanggal:</strong> {formatDateTime(selectedOrderForReceipt.created_at)}</p>
+                  <p className="text-sm"><strong>Kasir:</strong> {selectedOrderForReceipt.created_by_name || '-'}</p>
+                </div>
+                <div className="mb-4">
+                  {selectedOrderForReceipt.items?.map((item, idx) => (
+                    <div key={idx} className="flex justify-between text-sm py-1">
+                      <span>{item.quantity}x {item.product_name}</span>
+                      <span>{formatCurrency(item.subtotal)}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="border-t pt-4">
+                  <div className="flex justify-between font-bold">
+                    <span>Total</span>
+                    <span>{formatCurrency(selectedOrderForReceipt.total_amount)}</span>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-2">Metode: {selectedOrderForReceipt.payment_method}</p>
+                </div>
+                <div className="text-center mt-4 text-sm text-gray-600">
+                  {notaSettings.footer_text}
+                </div>
+                <div className="flex justify-end mt-4">
+                  <button onClick={() => setShowReceiptModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Tutup</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Purchase History Modal */}
+          {showPurchaseHistoryModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white p-6 rounded-xl shadow-lg max-w-4xl w-full max-h-[90vh] overflow-auto">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-bold text-gray-800">Riwayat Pembelian Lengkap</h3>
+                  <button onClick={() => setShowPurchaseHistoryModal(false)} className="text-gray-600 hover:text-gray-800">✕</button>
+                </div>
+                <div className="flex gap-4 mb-4">
+                  <input type="date" value={purchaseFilter.startDate} onChange={(e) => handlePurchaseFilterChange('startDate', e.target.value)} className="border rounded-lg px-3 py-2" />
+                  <input type="date" value={purchaseFilter.endDate} onChange={(e) => handlePurchaseFilterChange('endDate', e.target.value)} className="border rounded-lg px-3 py-2" />
+                  <button onClick={applyPurchaseFilter} className="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700">Filter</button>
+                </div>
+                {loadingPurchaseHistory ? (
+                  <div className="text-center py-8">Loading...</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-50">
+                        <tr><th className="text-left py-3 px-4">Tanggal</th><th className="text-left py-3 px-4">Bahan</th><th className="text-left py-3 px-4">Jumlah</th><th className="text-left py-3 px-4">Harga Satuan</th><th className="text-left py-3 px-4">Total</th><th className="text-left py-3 px-4">Catatan</th><th className="text-left py-3 px-4">Aksi</th></tr>
+                      </thead>
+                      <tbody>
+                        {purchaseHistory.map((purchase) => (
+                          <tr key={purchase.id} className="border-b hover:bg-gray-50">
+                            <td className="py-3 px-4">{formatDateTime(purchase.created_at)}</td>
+                            <td className="py-3 px-4">{purchase.ingredient_name}</td>
+                            <td className="py-3 px-4">{purchase.quantity} {purchase.unit}</td>
+                            <td className="py-3 px-4">{formatCurrency(purchase.unit_price)}</td>
+                            <td className="py-3 px-4">{formatCurrency(purchase.total_price)}</td>
+                            <td className="py-3 px-4">{purchase.notes || '-'}</td>
+                            <td className="py-3 px-4"><button onClick={() => handleDeletePurchase(purchase.id)} className="text-red-600 hover:text-red-800 text-sm">Hapus</button></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
+    </div>
+  );
+};
+
+export default AdminDashboard;
