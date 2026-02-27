@@ -327,7 +327,7 @@ const AdminDashboard = () => {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-6 overflow-auto">
+        <main className="flex-1 p-6 overflow-auto min-h-0">
           {loading ? (<div className="text-center py-8">Loading...</div>) : (
             <>
               {/* Dashboard */}
@@ -379,7 +379,7 @@ const AdminDashboard = () => {
                     {/* Daily Sales Trend - Full width on mobile, half on large screens */}
                     <div className="bg-white p-4 rounded-xl shadow overflow-hidden lg:col-span-2">
                       <h3 className="text-lg font-bold text-gray-800 mb-2">Trend Penjualan Bulan {formatMonthYear(selectedMonth, selectedYear)}</h3>
-                      <div className="h-80">
+                      <div className="h-80" ref={(el) => { if (el) el.style.minHeight = '320px' }}>
                         {!loading && chartsReady && dailySales.length > 0 ? (
                           <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={dailySales.map(item => ({ ...item, date: formatShortDate(item.date) }))} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
