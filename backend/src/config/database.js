@@ -63,11 +63,14 @@ const query = async (sql, params = []) => {
     try {
       // Ensure db is initialized
       if (!db) {
+        console.log('Initializing SQLite database for query...');
         await useSQLiteAsync();
       }
       
       // Convert undefined values to null for SQLite
       const safeParams = params.map(p => p === undefined ? null : p);
+      
+      console.log('SQLite Query:', sql.substring(0, 100), 'Params:', safeParams);
       
       const stmt = db.prepare(sql);
       if (safeParams.length > 0) {
@@ -96,6 +99,8 @@ const query = async (sql, params = []) => {
       return [results];
     } catch (error) {
       console.error('SQLite query error:', error);
+      console.error('Failed SQL:', sql);
+      console.error('Failed Params:', params);
       throw error;
     }
   } else {
@@ -104,6 +109,8 @@ const query = async (sql, params = []) => {
       return [results];
     } catch (error) {
       console.error('MySQL query error:', error);
+      console.error('Failed SQL:', sql);
+      console.error('Failed Params:', params);
       throw error;
     }
   }
@@ -122,9 +129,14 @@ const saveDatabase = () => {
 // Initialize database tables
 const initDatabase = async () => {
   try {
+    console.log('Starting database initialization...');
+    console.log('Using SQLite:', useSQLite);
+    
     if (useSQLite) {
       // Initialize sql.js first
       await useSQLiteAsync();
+      
+      console.log('Initializing SQLite tables...');
       
       // SQLite initialization
       db.run(`
@@ -278,9 +290,11 @@ const initDatabase = async () => {
           db.run('ALTER TABLE ingredients ADD COLUMN user_id INTEGER DEFAULT 1');
           db.run('UPDATE ingredients SET user_id = 1 WHERE user_id IS NULL');
           console.log('Migration complete: user_id column added to ingredients');
+        } else {
+          console.log('Migration: ingredients table already has user_id column');
         }
       } catch (migrationError) {
-        console.log('Migration check/error:', migrationError.message);
+        console.log('Migration check/error for ingredients:', migrationError.message);
       }
 
       // Migration: Add user_id column to categories table if it doesn't exist
@@ -292,9 +306,11 @@ const initDatabase = async () => {
           db.run('ALTER TABLE categories ADD COLUMN user_id INTEGER DEFAULT 1');
           db.run('UPDATE categories SET user_id = 1 WHERE user_id IS NULL');
           console.log('Migration complete: user_id column added to categories');
+        } else {
+          console.log('Migration: categories table already has user_id column');
         }
       } catch (migrationError) {
-        console.log('Migration check/error:', migrationError.message);
+        console.log('Migration check/error for categories:', migrationError.message);
       }
 
       // Migration: Add user_id column to products table if it doesn't exist
@@ -306,9 +322,11 @@ const initDatabase = async () => {
           db.run('ALTER TABLE products ADD COLUMN user_id INTEGER DEFAULT 1');
           db.run('UPDATE products SET user_id = 1 WHERE user_id IS NULL');
           console.log('Migration complete: user_id column added to products');
+        } else {
+          console.log('Migration: products table already has user_id column');
         }
       } catch (migrationError) {
-        console.log('Migration check/error:', migrationError.message);
+        console.log('Migration check/error for products:', migrationError.message);
       }
 
       // Migration: Add user_id column to orders table if it doesn't exist
@@ -320,9 +338,11 @@ const initDatabase = async () => {
           db.run('ALTER TABLE orders ADD COLUMN user_id INTEGER DEFAULT 1');
           db.run('UPDATE orders SET user_id = 1 WHERE user_id IS NULL');
           console.log('Migration complete: user_id column added to orders');
+        } else {
+          console.log('Migration: orders table already has user_id column');
         }
       } catch (migrationError) {
-        console.log('Migration check/error:', migrationError.message);
+        console.log('Migration check/error for orders:', migrationError.message);
       }
 
       // Migration: Add user_id column to purchases table if it doesn't exist
@@ -334,28 +354,41 @@ const initDatabase = async () => {
           db.run('ALTER TABLE purchases ADD COLUMN user_id INTEGER DEFAULT 1');
           db.run('UPDATE purchases SET user_id = 1 WHERE user_id IS NULL');
           console.log('Migration complete: user_id column added to purchases');
+        } else {
+          console.log('Migration: purchases table already has user_id column');
         }
       } catch (migrationError) {
-        console.log('Migration check/error:', migrationError.message);
+        console.log('Migration check/error for purchases:', migrationError.message);
       }
 
       // Create default admin user if not exists
-      const stmt = db.prepare('SELECT * FROM users WHERE username = ?');
-      stmt.bind(['admin']);
-      const adminExists = stmt.step() ? stmt.getAsObject() : null;
-      stmt.free();
-      
-      if (!adminExists) {
-        const hashedPassword = await bcrypt.hash('admin123', 10);
-        db.run(
-          'INSERT INTO users (username, password, name, role) VALUES (?, ?, ?, ?)',
-          ['admin', hashedPassword, 'Administrator', 'admin']
-        );
-        console.log('Default admin user created (username: admin, password: admin123)');
+      try {
+        const stmt = db.prepare('SELECT * FROM users WHERE username = ?');
+        stmt.bind(['admin']);
+        const adminExists = stmt.step() ? stmt.getAsObject() : null;
+        stmt.free();
+        
+        if (!adminExists) {
+          const hashedPassword = await bcrypt.hash('admin123', 10);
+          db.run(
+            'INSERT INTO users (username, password, name, role) VALUES (?, ?, ?, ?)',
+            ['admin', hashedPassword, 'Administrator', 'admin']
+          );
+          console.log('Default admin user created (username: admin, password: admin123)');
+        } else {
+          console.log('Default admin user already exists');
+        }
+      } catch (userError) {
+        console.error('Error creating default admin user:', userError.message);
       }
       
       // Save database after initialization
-      saveDatabase();
+      try {
+        saveDatabase();
+        console.log('Database saved successfully after initialization');
+      } catch (saveError) {
+        console.error('Error saving database:', saveError.message);
+      }
     } else {
       // MySQL initialization
       const connection = await pool.getConnection();
@@ -514,8 +547,11 @@ const initDatabase = async () => {
       
       connection.release();
     }
+    
+    console.log('Database initialization completed successfully');
   } catch (error) {
     console.error('Error initializing database:', error);
+    console.error('Stack trace:', error.stack);
     throw error;
   }
 };
