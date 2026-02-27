@@ -375,14 +375,15 @@ const AdminDashboard = () => {
                             <Area type="monotone" dataKey="total" stroke="#0088FE" fillOpacity={1} fill="url(#colorSales)" name="Penjualan" />
                           </AreaChart>
                         </ResponsiveContainer>
+                      </div> REPLACE
                       </div>
                     </div>
 
                     {/* Hourly Sales Today */}
                     <div className="bg-white p-6 rounded-xl shadow">
                       <h3 className="text-lg font-bold text-gray-800 mb-4">Penjualan per Jam (Hari Ini)</h3>
-                      <div className="h-64">
-                        <ResponsiveContainer width="100%" height="100%">
+                      <div className="h-64 min-w-0">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                           <BarChart data={hourlySales}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="hour" /><YAxis /><Tooltip formatter={(value) => formatCurrency(value)} /><Legend /><Bar dataKey="total" fill="#00C49F" name="Penjualan" /></BarChart>
                         </ResponsiveContainer>
                       </div>
@@ -391,8 +392,8 @@ const AdminDashboard = () => {
                     {/* Best Selling Products */}
                     <div className="bg-white p-6 rounded-xl shadow">
                       <h3 className="text-lg font-bold text-gray-800 mb-4">Produk Terlaris</h3>
-                      <div className="h-64">
-                        <ResponsiveContainer width="100%" height="100%">
+                      <div className="h-64 min-w-0">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                           <BarChart data={bestSellingProducts} layout="vertical"><CartesianGrid strokeDasharray="3 3" /><XAxis type="number" /><YAxis dataKey="product_name" type="category" width={100} /><Tooltip formatter={(value, name) => [value, name === 'total_quantity' ? 'Jumlah' : 'Total']} /><Legend /><Bar dataKey="total_quantity" fill="#FFBB28" name="Terjual" /></BarChart>
                         </ResponsiveContainer>
                       </div>
@@ -401,8 +402,8 @@ const AdminDashboard = () => {
                     {/* Payment Methods */}
                     <div className="bg-white p-6 rounded-xl shadow">
                       <h3 className="text-lg font-bold text-gray-800 mb-4">Metode Pembayaran</h3>
-                      <div className="h-64 flex items-center justify-center">
-                        <ResponsiveContainer width="100%" height="100%">
+                      <div className="h-64 min-w-0 flex items-center justify-center">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                           <PieChart>
                             <Pie data={paymentData} cx="50%" cy="50%" labelLine={false} label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`} outerRadius={80} fill="#8884d8" dataKey="value">
                               {paymentData.map((entry, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />))}
@@ -417,8 +418,8 @@ const AdminDashboard = () => {
                   {/* Daily Purchases Trend */}
                   <div className="bg-white p-6 rounded-xl shadow mb-8">
                     <h3 className="text-lg font-bold text-gray-800 mb-4">Trend Pembelian 30 Hari Terakhir</h3>
-                    <div className="h-64">
-                      <ResponsiveContainer width="100%" height="100%">
+                    <div className="h-64 min-w-0">
+                      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                         <AreaChart data={dailyPurchases.map(item => ({ ...item, date: formatShortDate(item.date) }))}>
                           <defs><linearGradient id="colorPurchases" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#FF8042" stopOpacity={0.8}/><stop offset="95%" stopColor="#FF8042" stopOpacity={0}/></linearGradient></defs>
                           <CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="date" /><YAxis />
@@ -432,8 +433,8 @@ const AdminDashboard = () => {
                   {/* Top Cashiers */}
                   <div className="bg-white p-6 rounded-xl shadow mb-8">
                     <h3 className="text-lg font-bold text-gray-800 mb-4">Kasir Terbaik</h3>
-                    <div className="h-64">
-                      <ResponsiveContainer width="100%" height="100%">
+                    <div className="h-64 min-w-0">
+                      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                         <BarChart data={topCashiers}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="name" /><YAxis /><Tooltip formatter={(value, name) => [name === 'total_sales' ? formatCurrency(value) : value, name === 'total_sales' ? 'Penjualan' : 'Pesanan']} /><Legend /><Bar dataKey="total_sales" fill="#8884D8" name="Penjualan" /><Bar dataKey="total_orders" fill="#82CA9D" name="Pesanan" /></BarChart>
                       </ResponsiveContainer>
                     </div>
