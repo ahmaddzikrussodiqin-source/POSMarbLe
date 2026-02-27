@@ -53,7 +53,12 @@ const orderController = {
         [userId, orderNumber, totalAmount, payment_method || 'cash', userId]
       );
 
-      const orderId = orderResult.insertId;
+      // Handle case where insertId might be undefined
+      const orderId = orderResult?.insertId;
+      if (!orderId) {
+        console.error('[Order] Failed to get insertId from orderResult:', orderResult);
+        return res.status(500).json({ error: 'Failed to create order: could not retrieve order ID' });
+      }
       console.log('[Order] Order created with ID:', orderId);
 
       // Insert order items
@@ -105,6 +110,11 @@ const orderController = {
         [orderId, userId]
       );
 
+      if (!orders || orders.length === 0) {
+        console.error('[Order] Order not found after creation, orderId:', orderId);
+        return res.status(500).json({ error: 'Order created but could not be retrieved' });
+      }
+
       const [orderItems] = await query(
         'SELECT * FROM order_items WHERE order_id = ?',
         [orderId]
@@ -114,11 +124,11 @@ const orderController = {
 
       res.status(201).json({
         ...orders[0],
-        items: orderItems
+        items: orderItems || []
       });
     } catch (error) {
-      console.error('Create order error:', error);
-      console.error('Error stack:', error.stack);
+      console.error('[Order] Create order error:', error);
+      console.error('[Order] Error stack:', error.stack);
       res.status(500).json({ error: 'Internal server error: ' + error.message });
     }
   },
@@ -126,6 +136,12 @@ const orderController = {
   // Get all orders
   getAll: async (req, res) => {
     try {
+      // Validate user exists in request
+      if (!req.user || !req.user.id) {
+        console.error('[Order] getAll: req.user or req.user.id is missing:', req.user);
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+      
       const userId = req.user.id;
       const { date, start_date, end_date, status, limit = 50, offset = 0 } = req.query;
       
@@ -173,8 +189,9 @@ const orderController = {
 
       res.json(orders || []);
     } catch (error) {
-      console.error('Get orders error:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      console.error('[Order] Get orders error:', error);
+      console.error('[Order] Error stack:', error.stack);
+      res.status(500).json({ error: 'Internal server error: ' + error.message });
     }
   },
 
