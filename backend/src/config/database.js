@@ -547,6 +547,63 @@ const initDatabase = async () => {
         )
       `);
 
+      // Migration: Add user_id column to ingredients table if it doesn't exist (MySQL)
+      try {
+        const [columns] = await connection.query(`
+          SELECT COLUMN_NAME 
+          FROM INFORMATION_SCHEMA.COLUMNS 
+          WHERE TABLE_NAME = 'ingredients' AND COLUMN_NAME = 'user_id'
+        `);
+        if (columns.length === 0) {
+          console.log('Migrating MySQL: Adding user_id column to ingredients table...');
+          await connection.query('ALTER TABLE ingredients ADD COLUMN user_id INT DEFAULT 1');
+          await connection.query('UPDATE ingredients SET user_id = 1 WHERE user_id IS NULL');
+          console.log('Migration complete: user_id column added to ingredients (MySQL)');
+        } else {
+          console.log('Migration: MySQL ingredients table already has user_id column');
+        }
+      } catch (migrationError) {
+        console.log('Migration check/error for MySQL ingredients:', migrationError.message);
+      }
+
+      // Migration: Add user_id column to categories table if it doesn't exist (MySQL)
+      try {
+        const [columns] = await connection.query(`
+          SELECT COLUMN_NAME 
+          FROM INFORMATION_SCHEMA.COLUMNS 
+          WHERE TABLE_NAME = 'categories' AND COLUMN_NAME = 'user_id'
+        `);
+        if (columns.length === 0) {
+          console.log('Migrating MySQL: Adding user_id column to categories table...');
+          await connection.query('ALTER TABLE categories ADD COLUMN user_id INT DEFAULT 1');
+          await connection.query('UPDATE categories SET user_id = 1 WHERE user_id IS NULL');
+          console.log('Migration complete: user_id column added to categories (MySQL)');
+        } else {
+          console.log('Migration: MySQL categories table already has user_id column');
+        }
+      } catch (migrationError) {
+        console.log('Migration check/error for MySQL categories:', migrationError.message);
+      }
+
+      // Migration: Add user_id column to products table if it doesn't exist (MySQL)
+      try {
+        const [columns] = await connection.query(`
+          SELECT COLUMN_NAME 
+          FROM INFORMATION_SCHEMA.COLUMNS 
+          WHERE TABLE_NAME = 'products' AND COLUMN_NAME = 'user_id'
+        `);
+        if (columns.length === 0) {
+          console.log('Migrating MySQL: Adding user_id column to products table...');
+          await connection.query('ALTER TABLE products ADD COLUMN user_id INT DEFAULT 1');
+          await connection.query('UPDATE products SET user_id = 1 WHERE user_id IS NULL');
+          console.log('Migration complete: user_id column added to products (MySQL)');
+        } else {
+          console.log('Migration: MySQL products table already has user_id column');
+        }
+      } catch (migrationError) {
+        console.log('Migration check/error for MySQL products:', migrationError.message);
+      }
+
       // Migration: Add user_id column to orders table if it doesn't exist (MySQL)
       try {
         const [columns] = await connection.query(`
