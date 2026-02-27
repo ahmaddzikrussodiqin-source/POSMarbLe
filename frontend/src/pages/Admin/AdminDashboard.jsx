@@ -105,9 +105,9 @@ const AdminDashboard = () => {
       if (activeTab === 'dashboard') {
         const [ordersRes, summaryRes, financialRes, dailySalesRes, hourlySalesRes, bestSellingRes, dailyPurchasesRes, topCashiersRes] = await Promise.all([
           ordersAPI.getAll(monthParams), reportsAPI.getSalesSummary(monthParams),
-          reportsAPI.getFinancialSummary(monthParams), reportsAPI.getDailySales(30),
+          reportsAPI.getFinancialSummary(monthParams), reportsAPI.getDailySales(monthParams),
           reportsAPI.getHourlySales(), reportsAPI.getBestSelling({ limit: 10, ...monthParams }),
-          reportsAPI.getDailyPurchases(30), reportsAPI.getTopCashiers({ limit: 5 }),
+          reportsAPI.getDailyPurchases(monthParams), reportsAPI.getTopCashiers({ limit: 5 }),
         ]);
         setOrders(ordersRes.data); setSummary(summaryRes.data); setFinancialSummary(financialRes.data);
         setDailySales(dailySalesRes.data || []); setHourlySales(hourlySalesRes.data || []);
@@ -378,7 +378,7 @@ const AdminDashboard = () => {
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                     {/* Daily Sales Trend */}
                     <div className="bg-white p-6 rounded-xl shadow">
-                      <h3 className="text-lg font-bold text-gray-800 mb-4">Trend Penjualan 30 Hari Terakhir</h3>
+                      <h3 className="text-lg font-bold text-gray-800 mb-4">Trend Penjualan Bulan {formatMonthYear(selectedMonth, selectedYear)}</h3>
                       <div className="h-64 min-w-0">
                         {!loading && chartsReady && dailySales.length > 0 ? (
                           <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} aspect={2}>
@@ -445,7 +445,7 @@ const AdminDashboard = () => {
 
                   {/* Daily Purchases Trend */}
                   <div className="bg-white p-6 rounded-xl shadow mb-8">
-                    <h3 className="text-lg font-bold text-gray-800 mb-4">Trend Pembelian 30 Hari Terakhir</h3>
+                    <h3 className="text-lg font-bold text-gray-800 mb-4">Trend Pembelian Bulan {formatMonthYear(selectedMonth, selectedYear)}</h3>
                     <div className="h-64 min-w-0">
                       {!loading && chartsReady && dailyPurchases.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} aspect={2}>

@@ -66,21 +66,33 @@ const reportController = {
   getDailySales: async (req, res) => {
     try {
       const userId = req.user.id;
-      const { days = 30 } = req.query;
+      const { start_date, end_date, days = 30 } = req.query;
       
-      // Calculate the date in JavaScript to be SQLite/MySQL compatible
-      const daysNum = parseInt(days);
-      const pastDate = new Date();
-      pastDate.setDate(pastDate.getDate() - daysNum);
-      const pastDateStr = pastDate.toISOString().split('T')[0];
+      let dateCondition;
+      let params;
+      
+      if (start_date && end_date) {
+        // Use the provided date range
+        dateCondition = "DATE(created_at) BETWEEN ? AND ?";
+        params = [userId, start_date, end_date];
+      } else {
+        // Fallback to last N days for backward compatibility
+        const daysNum = parseInt(days);
+        const pastDate = new Date();
+        pastDate.setDate(pastDate.getDate() - daysNum);
+        const pastDateStr = pastDate.toISOString().split('T')[0];
+        const todayStr = new Date().toISOString().split('T')[0];
+        dateCondition = "DATE(created_at) BETWEEN ? AND ?";
+        params = [userId, pastDateStr, todayStr];
+      }
       
       const [sales] = await query(
         `SELECT DATE(created_at) as date, COUNT(*) as orders, COALESCE(SUM(total_amount), 0) as total 
          FROM orders 
-         WHERE user_id = ? AND status = 'completed' AND DATE(created_at) >= ?
+         WHERE user_id = ? AND status = 'completed' AND ${dateCondition}
          GROUP BY DATE(created_at)
          ORDER BY date ASC`,
-        [userId, pastDateStr]
+        params
       );
 
       res.json(sales || []);
@@ -313,21 +325,33 @@ const reportController = {
   getDailyPurchases: async (req, res) => {
     try {
       const userId = req.user.id;
-      const { days = 30 } = req.query;
+      const { start_date, end_date, days = 30 } = req.query;
       
-      // Calculate the date in JavaScript to be SQLite/MySQL compatible
-      const daysNum = parseInt(days);
-      const pastDate = new Date();
-      pastDate.setDate(pastDate.getDate() - daysNum);
-      const pastDateStr = pastDate.toISOString().split('T')[0];
+      let dateCondition;
+      let params;
+      
+      if (start_date && end_date) {
+        // Use the provided date range
+        dateCondition = "DATE(created_at) BETWEEN ? AND ?";
+        params = [userId, start_date, end_date];
+      } else {
+        // Fallback to last N days for backward compatibility
+        const daysNum = parseInt(days);
+        const pastDate = new Date();
+        pastDate.setDate(pastDate.getDate() - daysNum);
+        const pastDateStr = pastDate.toISOString().split('T')[0];
+        const todayStr = new Date().toISOString().split('T')[0];
+        dateCondition = "DATE(created_at) BETWEEN ? AND ?";
+        params = [userId, pastDateStr, todayStr];
+      }
       
       const [purchases] = await query(
         `SELECT DATE(created_at) as date, COUNT(*) as count, COALESCE(SUM(total_price), 0) as total 
          FROM purchases 
-         WHERE user_id = ? AND DATE(created_at) >= ?
+         WHERE user_id = ? AND ${dateCondition}
          GROUP BY DATE(created_at)
          ORDER BY date ASC`,
-        [userId, pastDateStr]
+        params
       );
 
       res.json(purchases || []);

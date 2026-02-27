@@ -73,13 +73,13 @@ export const ordersAPI = {
 // Reports API
 export const reportsAPI = {
   getSalesSummary: (params) => api.get('/reports/sales-summary', { params }),
-  getDailySales: (days) => api.get('/reports/daily-sales', { params: { days } }),
+  getDailySales: (params) => api.get('/reports/daily-sales', { params }),
   getBestSelling: (params) => api.get('/reports/best-selling', { params }),
   getHourlySales: () => api.get('/reports/hourly-sales'),
   getTopCashiers: (params) => api.get('/reports/top-cashiers', { params }),
   getPurchaseSummary: (params) => api.get('/reports/purchase-summary', { params }),
   getFinancialSummary: (params) => api.get('/reports/financial-summary', { params }),
-  getDailyPurchases: (days) => api.get('/reports/daily-purchases', { params: { days } }),
+  getDailyPurchases: (params) => api.get('/reports/daily-purchases', { params }),
 };
 
 // Purchases API
