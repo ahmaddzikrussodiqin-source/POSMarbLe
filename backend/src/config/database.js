@@ -86,7 +86,9 @@ const query = async (sql, params = []) => {
         const lastIdResult = db.exec("SELECT last_insert_rowid() as insertId");
         if (lastIdResult.length > 0 && lastIdResult[0].values.length > 0) {
           const insertId = lastIdResult[0].values[0][0];
-          return [{ insertId, ...results[0] }];
+          // Handle case where results is empty (INSERT doesn't return rows)
+          const firstResult = results.length > 0 ? results[0] : {};
+          return [{ insertId, ...firstResult }];
         }
         return [{ insertId: results.length > 0 ? results[0].id : undefined }];
       }
