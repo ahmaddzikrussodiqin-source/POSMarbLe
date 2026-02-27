@@ -29,11 +29,11 @@ function App() {
             }
           />
           
-          {/* Admin Route - only accessible to admin */}
+          {/* Admin Dashboard Route - accessible to all authenticated users */}
           <Route
             path="/admin"
             element={
-              <ProtectedRoute requireAdmin>
+              <ProtectedRoute>
                 <AdminDashboard />
               </ProtectedRoute>
             }
