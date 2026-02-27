@@ -27,11 +27,11 @@ const authController = {
       console.log('[Register] Hashing password...');
       const hashedPassword = await bcrypt.hash(password, 10);
       
-      // Default role is 'cashier'
+      // Default role is 'admin' for all new users
       console.log('[Register] Inserting user into database...');
       const [result] = await query(
         'INSERT INTO users (username, password, name, role) VALUES (?, ?, ?, ?)',
-        [username, hashedPassword, name, 'cashier']
+        [username, hashedPassword, name, 'admin']
       );
 
       console.log('[Register] User inserted, result:', result);
@@ -64,7 +64,7 @@ const authController = {
           id: userId,
           username,
           name,
-          role: 'cashier'
+          role: 'admin'
         }
       });
     } catch (error) {
