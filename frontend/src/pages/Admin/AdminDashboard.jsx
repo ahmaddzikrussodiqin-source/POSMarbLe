@@ -375,17 +375,17 @@ const AdminDashboard = () => {
                   </div>
 
                   {/* Charts Grid */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
                     {/* Daily Sales Trend */}
-                    <div className="bg-white p-6 rounded-xl shadow overflow-hidden">
-                      <h3 className="text-lg font-bold text-gray-800 mb-4">Trend Penjualan Bulan {formatMonthYear(selectedMonth, selectedYear)}</h3>
-                      <div className="h-64 w-full" style={{ minHeight: '256px' }}>
+                    <div className="bg-white p-4 rounded-xl shadow overflow-hidden">
+                      <h3 className="text-lg font-bold text-gray-800 mb-2">Trend Penjualan Bulan {formatMonthYear(selectedMonth, selectedYear)}</h3>
+                      <div className="h-56 w-full" style={{ minHeight: '224px' }}>
                         {!loading && chartsReady && dailySales.length > 0 ? (
                           <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={dailySales.map(item => ({ ...item, date: formatShortDate(item.date) }))} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                            <AreaChart data={dailySales.map(item => ({ ...item, date: formatShortDate(item.date) }))} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                               <defs><linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#0088FE" stopOpacity={0.8}/><stop offset="95%" stopColor="#0088FE" stopOpacity={0}/></linearGradient></defs>
-                              <CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="date" /><YAxis />
-                              <Tooltip formatter={(value) => formatCurrency(value)} /><Legend wrapperStyle={{ fontSize: '12px' }} />
+                              <CartesianGrid strokeDasharray="3 3" stroke="#eee" /><XAxis dataKey="date" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} />
+                              <Tooltip formatter={(value) => formatCurrency(value)} contentStyle={{ fontSize: '12px' }} /><Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} />
                               <Area type="monotone" dataKey="total" stroke="#0088FE" fillOpacity={1} fill="url(#colorSales)" name="Penjualan" />
                             </AreaChart>
                           </ResponsiveContainer>
@@ -396,12 +396,12 @@ const AdminDashboard = () => {
                     </div>
 
                     {/* Hourly Sales Today */}
-                    <div className="bg-white p-6 rounded-xl shadow overflow-hidden">
-                      <h3 className="text-lg font-bold text-gray-800 mb-4">Penjualan per Jam (Hari Ini)</h3>
-                      <div className="h-64 w-full" style={{ minHeight: '256px' }}>
+                    <div className="bg-white p-4 rounded-xl shadow overflow-hidden">
+                      <h3 className="text-lg font-bold text-gray-800 mb-2">Penjualan per Jam (Hari Ini)</h3>
+                      <div className="h-56 w-full" style={{ minHeight: '224px' }}>
                         {!loading && chartsReady && hourlySales.length > 0 ? (
                           <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={hourlySales} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="hour" /><YAxis /><Tooltip formatter={(value) => formatCurrency(value)} /><Legend wrapperStyle={{ fontSize: '12px' }} /><Bar dataKey="total" fill="#00C49F" name="Penjualan" /></BarChart>
+                            <BarChart data={hourlySales} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" stroke="#eee" /><XAxis dataKey="hour" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} /><Tooltip formatter={(value) => formatCurrency(value)} contentStyle={{ fontSize: '12px' }} /><Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} /><Bar dataKey="total" fill="#00C49F" name="Penjualan" /></BarChart>
                           </ResponsiveContainer>
                         ) : (
                           <div className="h-full flex items-center justify-center text-gray-400">{loading ? 'Memuat...' : 'Tidak ada data'}</div>
@@ -410,12 +410,12 @@ const AdminDashboard = () => {
                     </div>
 
                     {/* Best Selling Products */}
-                    <div className="bg-white p-6 rounded-xl shadow overflow-hidden">
-                      <h3 className="text-lg font-bold text-gray-800 mb-4">Produk Terlaris</h3>
-                      <div className="h-64 w-full" style={{ minHeight: '256px' }}>
+                    <div className="bg-white p-4 rounded-xl shadow overflow-hidden">
+                      <h3 className="text-lg font-bold text-gray-800 mb-2">Produk Terlaris</h3>
+                      <div className="h-56 w-full" style={{ minHeight: '224px' }}>
                         {!loading && chartsReady && bestSellingProducts.length > 0 ? (
                           <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={bestSellingProducts} layout="vertical" margin={{ top: 10, right: 30, left: 10, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" /><XAxis type="number" /><YAxis dataKey="product_name" type="category" width={100} /><Tooltip formatter={(value, name) => [value, name === 'total_quantity' ? 'Jumlah' : 'Total']} /><Legend wrapperStyle={{ fontSize: '12px' }} /><Bar dataKey="total_quantity" fill="#FFBB28" name="Terjual" /></BarChart>
+                            <BarChart data={bestSellingProducts} layout="vertical" margin={{ top: 5, right: 10, left: 5, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" stroke="#eee" /><XAxis type="number" tick={{ fontSize: 10 }} /><YAxis dataKey="product_name" type="category" width={80} tick={{ fontSize: 10 }} /><Tooltip formatter={(value, name) => [value, name === 'total_quantity' ? 'Jumlah' : 'Total']} contentStyle={{ fontSize: '12px' }} /><Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} /><Bar dataKey="total_quantity" fill="#FFBB28" name="Terjual" /></BarChart>
                           </ResponsiveContainer>
                         ) : (
                           <div className="h-full flex items-center justify-center text-gray-400">{loading ? 'Memuat...' : 'Tidak ada data'}</div>
@@ -424,16 +424,16 @@ const AdminDashboard = () => {
                     </div>
 
                     {/* Payment Methods */}
-                    <div className="bg-white p-6 rounded-xl shadow overflow-hidden">
-                      <h3 className="text-lg font-bold text-gray-800 mb-4">Metode Pembayaran</h3>
-                      <div className="h-64 w-full flex items-center justify-center" style={{ minHeight: '256px' }}>
+                    <div className="bg-white p-4 rounded-xl shadow overflow-hidden">
+                      <h3 className="text-lg font-bold text-gray-800 mb-2">Metode Pembayaran</h3>
+                      <div className="h-56 w-full flex items-center justify-center" style={{ minHeight: '224px' }}>
                         {!loading && chartsReady && paymentData.length > 0 ? (
                           <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
-                              <Pie data={paymentData} cx="50%" cy="50%" labelLine={false} label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`} outerRadius={80} fill="#8884d8" dataKey="value">
+                              <Pie data={paymentData} cx="50%" cy="50%" labelLine={false} label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`} outerRadius={60} fill="#8884d8" dataKey="value">
                                 {paymentData.map((entry, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />))}
                               </Pie>
-                              <Tooltip formatter={(value) => formatCurrency(value)} /><Legend wrapperStyle={{ fontSize: '12px' }} />
+                              <Tooltip formatter={(value) => formatCurrency(value)} contentStyle={{ fontSize: '12px' }} /><Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} />
                             </PieChart>
                           </ResponsiveContainer>
                         ) : (
@@ -444,15 +444,15 @@ const AdminDashboard = () => {
                   </div>
 
                   {/* Daily Purchases Trend */}
-                  <div className="bg-white p-6 rounded-xl shadow mb-8 overflow-hidden">
-                    <h3 className="text-lg font-bold text-gray-800 mb-4">Trend Pembelian Bulan {formatMonthYear(selectedMonth, selectedYear)}</h3>
-                    <div className="h-64 w-full" style={{ minHeight: '256px' }}>
+                  <div className="bg-white p-4 rounded-xl shadow mb-8 overflow-hidden">
+                    <h3 className="text-lg font-bold text-gray-800 mb-2">Trend Pembelian Bulan {formatMonthYear(selectedMonth, selectedYear)}</h3>
+                    <div className="h-56 w-full" style={{ minHeight: '224px' }}>
                       {!loading && chartsReady && dailyPurchases.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={dailyPurchases.map(item => ({ ...item, date: formatShortDate(item.date) }))} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                          <AreaChart data={dailyPurchases.map(item => ({ ...item, date: formatShortDate(item.date) }))} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                             <defs><linearGradient id="colorPurchases" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#FF8042" stopOpacity={0.8}/><stop offset="95%" stopColor="#FF8042" stopOpacity={0}/></linearGradient></defs>
-                            <CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="date" /><YAxis />
-                            <Tooltip formatter={(value) => formatCurrency(value)} /><Legend wrapperStyle={{ fontSize: '12px' }} />
+                            <CartesianGrid strokeDasharray="3 3" stroke="#eee" /><XAxis dataKey="date" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} />
+                            <Tooltip formatter={(value) => formatCurrency(value)} contentStyle={{ fontSize: '12px' }} /><Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} />
                             <Area type="monotone" dataKey="total" stroke="#FF8042" fillOpacity={1} fill="url(#colorPurchases)" name="Pembelian" />
                           </AreaChart>
                         </ResponsiveContainer>
@@ -463,12 +463,12 @@ const AdminDashboard = () => {
                   </div>
 
                   {/* Top Cashiers */}
-                  <div className="bg-white p-6 rounded-xl shadow mb-8 overflow-hidden">
-                    <h3 className="text-lg font-bold text-gray-800 mb-4">Kasir Terbaik</h3>
-                    <div className="h-64 w-full" style={{ minHeight: '256px' }}>
+                  <div className="bg-white p-4 rounded-xl shadow mb-8 overflow-hidden">
+                    <h3 className="text-lg font-bold text-gray-800 mb-2">Kasir Terbaik</h3>
+                    <div className="h-56 w-full" style={{ minHeight: '224px' }}>
                       {!loading && chartsReady && topCashiers.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={topCashiers} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="name" /><YAxis /><Tooltip formatter={(value, name) => [name === 'total_sales' ? formatCurrency(value) : value, name === 'total_sales' ? 'Penjualan' : 'Pesanan']} /><Legend wrapperStyle={{ fontSize: '12px' }} /><Bar dataKey="total_sales" fill="#8884D8" name="Penjualan" /><Bar dataKey="total_orders" fill="#82CA9D" name="Pesanan" /></BarChart>
+                          <BarChart data={topCashiers} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" stroke="#eee" /><XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} /><Tooltip formatter={(value, name) => [name === 'total_sales' ? formatCurrency(value) : value, name === 'total_sales' ? 'Penjualan' : 'Pesanan']} contentStyle={{ fontSize: '12px' }} /><Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} /><Bar dataKey="total_sales" fill="#8884D8" name="Penjualan" /><Bar dataKey="total_orders" fill="#82CA9D" name="Pesanan" /></BarChart>
                         </ResponsiveContainer>
                       ) : (
                         <div className="h-full flex items-center justify-center text-gray-400">{loading ? 'Memuat...' : 'Tidak ada data'}</div>
