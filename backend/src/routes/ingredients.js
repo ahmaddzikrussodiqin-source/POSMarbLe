@@ -3,10 +3,10 @@ const router = express.Router();
 const ingredientController = require('../controllers/ingredientController');
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
 
-// Public routes - get all ingredients (for POS and product management)
-router.get('/', ingredientController.getAll);
-router.get('/product/:productId', ingredientController.getProductIngredients);
-router.get('/:id', ingredientController.getById);
+// All routes require authentication - each user has their own ingredients
+router.get('/', authenticateToken, ingredientController.getAll);
+router.get('/product/:productId', authenticateToken, ingredientController.getProductIngredients);
+router.get('/:id', authenticateToken, ingredientController.getById);
 
 // Protected routes - require authentication and admin role
 router.post('/', authenticateToken, requireAdmin, ingredientController.create);

@@ -4,11 +4,12 @@ const reportController = {
   // Get sales summary
   getSalesSummary: async (req, res) => {
     try {
+      const userId = req.user.id;
       const { start_date, end_date } = req.query;
       
       // Build WHERE clause based on filters
-      const conditions = ["status = 'completed'"];
-      const params = [];
+      const conditions = ["user_id = ?", "status = 'completed'"];
+      const params = [userId];
 
       if (start_date && end_date) {
         conditions.push("DATE(created_at) BETWEEN ? AND ?");
@@ -64,15 +65,16 @@ const reportController = {
   // Get daily sales
   getDailySales: async (req, res) => {
     try {
+      const userId = req.user.id;
       const { days = 30 } = req.query;
       
       const [sales] = await query(
         `SELECT DATE(created_at) as date, COUNT(*) as orders, COALESCE(SUM(total_amount), 0) as total 
          FROM orders 
-         WHERE status = 'completed' AND created_at >= DATE_SUB(CURRENT_DATE, INTERVAL ? DAY)
+         WHERE user_id = ? AND status = 'completed' AND created_at >= DATE_SUB(CURRENT_DATE, INTERVAL ? DAY)
          GROUP BY DATE(created_at)
          ORDER BY date ASC`,
-        [parseInt(days)]
+        [userId, parseInt(days)]
       );
 
       res.json(sales || []);
@@ -85,19 +87,28 @@ const reportController = {
   // Get best selling products
   getBestSellingProducts: async (req, res) => {
     try {
+      const userId = req.user.id;
       const { limit = 10, start_date, end_date } = req.query;
       
+      let whereClause = 'o.user_id = ? AND o.status = ?';
+      let params = [userId, 'completed'];
+
+      if (start_date && end_date) {
+        whereClause += ' AND DATE(o.created_at) BETWEEN ? AND ?';
+        params.push(start_date, end_date);
+      }
+
       const [products] = await query(
         `SELECT oi.product_id, oi.product_name, 
                 SUM(oi.quantity) as total_quantity, 
                 SUM(oi.subtotal) as total_sales 
          FROM order_items oi
          JOIN orders o ON oi.order_id = o.id
-         WHERE o.status = 'completed'
+         WHERE ${whereClause}
          GROUP BY oi.product_id, oi.product_name
          ORDER BY total_quantity DESC
          LIMIT ?`,
-        [parseInt(limit)]
+        [...params, parseInt(limit)]
       );
 
       res.json(products || []);
@@ -110,12 +121,14 @@ const reportController = {
   // Get hourly sales (for today)
   getHourlySales: async (req, res) => {
     try {
+      const userId = req.user.id;
       const [sales] = await query(
         `SELECT HOUR(created_at) as hour, COUNT(*) as orders, COALESCE(SUM(total_amount), 0) as total 
          FROM orders 
-         WHERE status = 'completed' AND DATE(created_at) = DATE('now')
+         WHERE user_id = ? AND status = 'completed' AND DATE(created_at) = DATE('now')
          GROUP BY HOUR(created_at)
-         ORDER BY hour ASC`
+         ORDER BY hour ASC`,
+        [userId]
       );
 
       // Fill in missing hours
@@ -139,17 +152,19 @@ const reportController = {
   // Get top cashiers
   getTopCashiers: async (req, res) => {
     try {
+      const userId = req.user.id;
       const { limit = 5 } = req.query;
       
+      // Get cashiers who have orders for this user
       const [cashiers] = await query(
         `SELECT u.id, u.name, COUNT(o.id) as total_orders, COALESCE(SUM(o.total_amount), 0) as total_sales 
          FROM users u
-         LEFT JOIN orders o ON u.id = o.created_by AND o.status = 'completed'
-         WHERE u.role = 'cashier'
+         LEFT JOIN orders o ON u.id = o.created_by AND o.user_id = ? AND o.status = 'completed'
+         WHERE u.role = 'cashier' AND (o.user_id = ? OR o.user_id IS NULL)
          GROUP BY u.id, u.name
          ORDER BY total_sales DESC
          LIMIT ?`,
-        [parseInt(limit)]
+        [userId, userId, parseInt(limit)]
       );
 
       res.json(cashiers || []);
@@ -162,11 +177,12 @@ const reportController = {
   // Get purchase summary (money out)
   getPurchaseSummary: async (req, res) => {
     try {
+      const userId = req.user.id;
       const { start_date, end_date } = req.query;
       
       // Build WHERE clause based on filters
-      let conditions = [];
-      let params = [];
+      const conditions = ["user_id = ?"];
+      const params = [userId];
 
       if (start_date && end_date) {
         conditions.push("DATE(created_at) BETWEEN ? AND ?");
@@ -179,17 +195,17 @@ const reportController = {
         params.push(end_date);
       }
 
-      const whereClause = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
+      const whereClause = conditions.join(' AND ');
 
       // Get total purchases
       const [totalPurchases] = await query(
-        `SELECT COALESCE(SUM(total_price), 0) as total FROM purchases ${whereClause}`,
+        `SELECT COALESCE(SUM(total_price), 0) as total FROM purchases WHERE ${whereClause}`,
         params
       );
 
       // Get total purchase count
       const [totalCount] = await query(
-        `SELECT COUNT(*) as count FROM purchases ${whereClause}`,
+        `SELECT COUNT(*) as count FROM purchases WHERE ${whereClause}`,
         params
       );
 
@@ -199,7 +215,7 @@ const reportController = {
                 SUM(quantity) as total_quantity, 
                 COALESCE(SUM(total_price), 0) as total 
          FROM purchases 
-         ${whereClause}
+         WHERE ${whereClause}
          GROUP BY ingredient_id, ingredient_name
          ORDER BY total DESC`,
         params
@@ -219,15 +235,16 @@ const reportController = {
   // Get financial summary (money in vs money out)
   getFinancialSummary: async (req, res) => {
     try {
+      const userId = req.user.id;
       const { start_date, end_date } = req.query;
       
       // Build WHERE clause for sales
-      let salesConditions = ["status = 'completed'"];
-      let salesParams = [];
+      const salesConditions = ["user_id = ?", "status = 'completed'"];
+      const salesParams = [userId];
 
       // Build WHERE clause for purchases
-      let purchaseConditions = [];
-      let purchaseParams = [];
+      const purchaseConditions = ["user_id = ?"];
+      const purchaseParams = [userId];
 
       if (start_date && end_date) {
         salesConditions.push("DATE(created_at) BETWEEN ? AND ?");
@@ -250,7 +267,7 @@ const reportController = {
       }
 
       const salesWhereClause = salesConditions.join(' AND ');
-      const purchaseWhereClause = purchaseConditions.length > 0 ? purchaseConditions.join(' AND ') : '1=1';
+      const purchaseWhereClause = purchaseConditions.join(' AND ');
 
       // Get total sales (money in)
       const [totalSales] = await query(
@@ -284,15 +301,16 @@ const reportController = {
   // Get daily purchases
   getDailyPurchases: async (req, res) => {
     try {
+      const userId = req.user.id;
       const { days = 30 } = req.query;
       
       const [purchases] = await query(
         `SELECT DATE(created_at) as date, COUNT(*) as count, COALESCE(SUM(total_price), 0) as total 
          FROM purchases 
-         WHERE created_at >= DATE_SUB(CURRENT_DATE, INTERVAL ? DAY)
+         WHERE user_id = ? AND created_at >= DATE_SUB(CURRENT_DATE, INTERVAL ? DAY)
          GROUP BY DATE(created_at)
          ORDER BY date ASC`,
-        [parseInt(days)]
+        [userId, parseInt(days)]
       );
 
       res.json(purchases || []);

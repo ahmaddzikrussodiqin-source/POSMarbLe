@@ -3,10 +3,10 @@ const router = express.Router();
 const notaController = require('../controllers/notaController');
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
 
-// Public routes - get nota settings (for POS display)
-router.get('/', notaController.getNota);
+// All routes require authentication - each user has their own nota settings
+router.get('/', authenticateToken, notaController.getNota);
 
-// Protected routes - require authentication to update
+// Protected routes - require authentication and admin role to update
 router.put('/', authenticateToken, requireAdmin, notaController.updateNota);
 router.post('/reset', authenticateToken, requireAdmin, notaController.resetNota);
 

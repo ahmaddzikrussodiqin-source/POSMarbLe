@@ -140,19 +140,22 @@ const initDatabase = async () => {
       db.run(`
         CREATE TABLE IF NOT EXISTS categories (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
           name TEXT NOT NULL,
           description TEXT,
           image_url TEXT,
           sort_order INTEGER DEFAULT 0,
           is_active INTEGER DEFAULT 1,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         )
       `);
 
       db.run(`
         CREATE TABLE IF NOT EXISTS products (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
           name TEXT NOT NULL,
           description TEXT,
           price REAL NOT NULL,
@@ -162,18 +165,21 @@ const initDatabase = async () => {
           is_available INTEGER DEFAULT 1,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
+          FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         )
       `);
 
       db.run(`
         CREATE TABLE IF NOT EXISTS ingredients (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
           name TEXT NOT NULL,
           unit TEXT DEFAULT 'gram',
           stock REAL DEFAULT 0,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         )
       `);
 
@@ -191,6 +197,7 @@ const initDatabase = async () => {
       db.run(`
         CREATE TABLE IF NOT EXISTS orders (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
           order_number TEXT UNIQUE NOT NULL,
           total_amount REAL NOT NULL,
           payment_method TEXT DEFAULT 'cash',
@@ -199,7 +206,8 @@ const initDatabase = async () => {
           created_by INTEGER,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+          FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         )
       `);
 
@@ -221,6 +229,7 @@ const initDatabase = async () => {
       db.run(`
         CREATE TABLE IF NOT EXISTS purchases (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
           purchase_number TEXT UNIQUE NOT NULL,
           ingredient_id INTEGER NOT NULL,
           ingredient_name TEXT NOT NULL,
@@ -232,7 +241,8 @@ const initDatabase = async () => {
           notes TEXT,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (ingredient_id) REFERENCES ingredients(id) ON DELETE CASCADE,
-          FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+          FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         )
       `);
 
@@ -240,7 +250,8 @@ const initDatabase = async () => {
       db.run(`
         CREATE TABLE IF NOT EXISTS nota_settings (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
-          shop_name TEXT DEFAULT 'POSMarbLe',
+          user_id INTEGER UNIQUE NOT NULL,
+          shop_name TEXT DEFAULT 'Toko Saya',
           address TEXT,
           phone TEXT,
           footer_text TEXT DEFAULT 'Terima kasih telah belanja di toko kami!',
@@ -249,7 +260,8 @@ const initDatabase = async () => {
           tax_rate REAL DEFAULT 0,
           currency TEXT DEFAULT 'IDR',
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         )
       `);
 
@@ -291,19 +303,22 @@ const initDatabase = async () => {
       await connection.query(`
         CREATE TABLE IF NOT EXISTS categories (
           id INT AUTO_INCREMENT PRIMARY KEY,
+          user_id INT NOT NULL,
           name VARCHAR(100) NOT NULL,
           description TEXT,
           image_url VARCHAR(255),
           sort_order INT DEFAULT 0,
           is_active BOOLEAN DEFAULT TRUE,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         )
       `);
 
       await connection.query(`
         CREATE TABLE IF NOT EXISTS products (
           id INT AUTO_INCREMENT PRIMARY KEY,
+          user_id INT NOT NULL,
           name VARCHAR(100) NOT NULL,
           description TEXT,
           price DECIMAL(10, 2) NOT NULL,
@@ -313,18 +328,21 @@ const initDatabase = async () => {
           is_available BOOLEAN DEFAULT TRUE,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-          FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
+          FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         )
       `);
 
       await connection.query(`
         CREATE TABLE IF NOT EXISTS ingredients (
           id INT AUTO_INCREMENT PRIMARY KEY,
+          user_id INT NOT NULL,
           name VARCHAR(100) NOT NULL,
           unit VARCHAR(20) DEFAULT 'gram',
           stock DECIMAL(10, 2) DEFAULT 0,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         )
       `);
 
@@ -342,6 +360,7 @@ const initDatabase = async () => {
       await connection.query(`
         CREATE TABLE IF NOT EXISTS orders (
           id INT AUTO_INCREMENT PRIMARY KEY,
+          user_id INT NOT NULL,
           order_number VARCHAR(50) UNIQUE NOT NULL,
           total_amount DECIMAL(10, 2) NOT NULL,
           payment_method ENUM('cash', 'qris', 'debit') DEFAULT 'cash',
@@ -350,7 +369,8 @@ const initDatabase = async () => {
           created_by INT,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-          FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+          FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         )
       `);
 
@@ -372,6 +392,7 @@ const initDatabase = async () => {
       await connection.query(`
         CREATE TABLE IF NOT EXISTS purchases (
           id INT AUTO_INCREMENT PRIMARY KEY,
+          user_id INT NOT NULL,
           purchase_number VARCHAR(50) UNIQUE NOT NULL,
           ingredient_id INT NOT NULL,
           ingredient_name VARCHAR(100) NOT NULL,
@@ -383,7 +404,8 @@ const initDatabase = async () => {
           notes TEXT,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (ingredient_id) REFERENCES ingredients(id) ON DELETE CASCADE,
-          FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+          FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         )
       `);
 
@@ -391,7 +413,8 @@ const initDatabase = async () => {
       await connection.query(`
         CREATE TABLE IF NOT EXISTS nota_settings (
           id INT AUTO_INCREMENT PRIMARY KEY,
-          shop_name VARCHAR(100) DEFAULT 'POSMarbLe',
+          user_id INT UNIQUE NOT NULL,
+          shop_name VARCHAR(100) DEFAULT 'Toko Saya',
           address VARCHAR(255),
           phone VARCHAR(20),
           footer_text VARCHAR(255) DEFAULT 'Terima kasih telah belanja di toko kami!',
@@ -400,7 +423,8 @@ const initDatabase = async () => {
           tax_rate DECIMAL(5,2) DEFAULT 0,
           currency VARCHAR(10) DEFAULT 'IDR',
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         )
       `);
 

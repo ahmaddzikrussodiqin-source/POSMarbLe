@@ -2,7 +2,7 @@ const { query, useSQLite, saveDatabase } = require('../config/database');
 
 // Default nota settings
 const defaultNota = {
-  shop_name: 'POSMarbLe',
+  shop_name: 'Toko Saya',
   address: '',
   phone: '',
   footer_text: 'Terima kasih telah belanja di toko kami!',
@@ -12,16 +12,17 @@ const defaultNota = {
   currency: 'IDR',
 };
 
-// Ensure nota settings record exists
-const ensureNotaExists = async () => {
+// Ensure nota settings record exists for a user
+const ensureNotaExists = async (userId) => {
   try {
-    const [rows] = await query('SELECT * FROM nota_settings LIMIT 1');
+    const [rows] = await query('SELECT * FROM nota_settings WHERE user_id = ?', [userId]);
     if (!rows || rows.length === 0) {
-      // Create default record
+      // Create default record for user
       await query(
-        `INSERT INTO nota_settings (shop_name, address, phone, footer_text, show_logo, show_qr_code, tax_rate, currency) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO nota_settings (user_id, shop_name, address, phone, footer_text, show_logo, show_qr_code, tax_rate, currency) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
+          userId,
           defaultNota.shop_name,
           defaultNota.address,
           defaultNota.phone,
@@ -39,11 +40,11 @@ const ensureNotaExists = async () => {
   }
 };
 
-// Read nota settings from database
-const getNotaData = async () => {
+// Read nota settings from database for a user
+const getNotaData = async (userId) => {
   try {
-    await ensureNotaExists();
-    const [rows] = await query('SELECT * FROM nota_settings LIMIT 1');
+    await ensureNotaExists(userId);
+    const [rows] = await query('SELECT * FROM nota_settings WHERE user_id = ?', [userId]);
     if (rows && rows.length > 0) {
       const row = rows[0];
       return {
@@ -63,39 +64,35 @@ const getNotaData = async () => {
   return defaultNota;
 };
 
-// Update nota settings in database
-const saveNotaData = async (data) => {
+// Update nota settings in database for a user
+const saveNotaData = async (userId, data) => {
   try {
-    await ensureNotaExists();
-    const [rows] = await query('SELECT id FROM nota_settings LIMIT 1');
-    if (rows && rows.length > 0) {
-      const id = rows[0].id;
-      await query(
-        `UPDATE nota_settings SET 
-          shop_name = ?, 
-          address = ?, 
-          phone = ?, 
-          footer_text = ?, 
-          show_logo = ?, 
-          show_qr_code = ?, 
-          tax_rate = ?, 
-          currency = ? 
-         WHERE id = ?`,
-        [
-          data.shop_name,
-          data.address,
-          data.phone,
-          data.footer_text,
-          data.show_logo ? 1 : 0,
-          data.show_qr_code ? 1 : 0,
-          data.tax_rate,
-          data.currency,
-          id
-        ]
-      );
-      if (useSQLite) saveDatabase();
-      return true;
-    }
+    await ensureNotaExists(userId);
+    await query(
+      `UPDATE nota_settings SET 
+        shop_name = ?, 
+        address = ?, 
+        phone = ?, 
+        footer_text = ?, 
+        show_logo = ?, 
+        show_qr_code = ?, 
+        tax_rate = ?, 
+        currency = ? 
+       WHERE user_id = ?`,
+      [
+        data.shop_name,
+        data.address,
+        data.phone,
+        data.footer_text,
+        data.show_logo ? 1 : 0,
+        data.show_qr_code ? 1 : 0,
+        data.tax_rate,
+        data.currency,
+        userId
+      ]
+    );
+    if (useSQLite) saveDatabase();
+    return true;
   } catch (error) {
     console.error('Error saving nota to database:', error);
   }
@@ -105,7 +102,8 @@ const saveNotaData = async (data) => {
 // Get nota settings
 exports.getNota = async (req, res) => {
   try {
-    const nota = await getNotaData();
+    const userId = req.user.id;
+    const nota = await getNotaData(userId);
     res.json(nota);
   } catch (error) {
     console.error('Error getting nota:', error);
@@ -116,10 +114,11 @@ exports.getNota = async (req, res) => {
 // Update nota settings
 exports.updateNota = async (req, res) => {
   try {
-    const currentNota = await getNotaData();
+    const userId = req.user.id;
+    const currentNota = await getNotaData(userId);
     const updatedNota = { ...currentNota, ...req.body };
     
-    if (await saveNotaData(updatedNota)) {
+    if (await saveNotaData(userId, updatedNota)) {
       res.json(updatedNota);
     } else {
       res.status(500).json({ error: 'Failed to save nota settings' });
@@ -133,7 +132,8 @@ exports.updateNota = async (req, res) => {
 // Reset nota settings to default
 exports.resetNota = async (req, res) => {
   try {
-    if (await saveNotaData(defaultNota)) {
+    const userId = req.user.id;
+    if (await saveNotaData(userId, defaultNota)) {
       res.json(defaultNota);
     } else {
       res.status(500).json({ error: 'Failed to reset nota settings' });

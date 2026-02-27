@@ -1,6 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { query, useSQLite } = require('../config/database');
+const { query, saveDatabase } = require('../config/database');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_key_change_this_in_production';
 
@@ -28,10 +28,21 @@ const authController = {
         [username, hashedPassword, name, 'cashier']
       );
 
+      const userId = result.insertId;
+
+      // Create default nota_settings for the new user
+      await query(
+        'INSERT INTO nota_settings (user_id, shop_name, footer_text) VALUES (?, ?, ?)',
+        [userId, name + "'s Store", 'Terima kasih telah belanja di toko kami!']
+      );
+
+      // Save database after inserting
+      saveDatabase();
+
       res.status(201).json({
         message: 'User registered successfully',
         user: {
-          id: result.insertId,
+          id: userId,
           username,
           name,
           role: 'cashier'

@@ -3,9 +3,9 @@ const router = express.Router();
 const productController = require('../controllers/productController');
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
 
-// Public routes - get all products (for POS)
-router.get('/', productController.getAll);
-router.get('/:id', productController.getById);
+// All routes require authentication - each user has their own products
+router.get('/', authenticateToken, productController.getAll);
+router.get('/:id', authenticateToken, productController.getById);
 
 // Protected routes - require authentication and admin role
 router.post('/', authenticateToken, requireAdmin, productController.create);

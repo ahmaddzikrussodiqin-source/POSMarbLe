@@ -25,12 +25,21 @@ const purchaseController = {
         return res.status(400).json({ error: 'Purchase items are required' });
       }
 
-      // Validate all items have required fields
+      // Validate all items have required fields and belong to user
       for (const item of items) {
         console.log('Validating item:', item);
         if (!item.ingredient_id || !item.quantity || item.quantity <= 0 || !item.unit_price || item.unit_price <= 0) {
           console.log('Validation failed for item:', item);
           return res.status(400).json({ error: 'Each item must have ingredient_id, quantity ( > 0), and unit_price ( > 0)' });
+        }
+        
+        // Verify ingredient belongs to user
+        const [ingCheck] = await query(
+          'SELECT id FROM ingredients WHERE id = ? AND user_id = ?',
+          [item.ingredient_id, userId]
+        );
+        if (!ingCheck || ingCheck.length === 0) {
+          return res.status(400).json({ error: `Ingredient not found or does not belong to user` });
         }
       }
 
@@ -42,8 +51,8 @@ const purchaseController = {
         
         // Get ingredient details
         const [ingredients] = await query(
-          'SELECT * FROM ingredients WHERE id = ?',
-          [item.ingredient_id]
+          'SELECT * FROM ingredients WHERE id = ? AND user_id = ?',
+          [item.ingredient_id, userId]
         );
 
         console.log('Found ingredients:', ingredients);
@@ -64,11 +73,12 @@ const purchaseController = {
         // Generate purchase number
         const purchaseNumber = purchaseController.generatePurchaseNumber();
 
-        // Insert purchase record
+        // Insert purchase record with user_id
         const [purchaseResult] = await query(
-          `INSERT INTO purchases (purchase_number, ingredient_id, ingredient_name, quantity, unit, unit_price, total_price, created_by, notes) 
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO purchases (user_id, purchase_number, ingredient_id, ingredient_name, quantity, unit, unit_price, total_price, created_by, notes) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
+            userId,
             purchaseNumber,
             item.ingredient_id,
             ingredient.name,
@@ -90,15 +100,15 @@ const purchaseController = {
         
         try {
           const [updateResult] = await query(
-            'UPDATE ingredients SET stock = ? WHERE id = ?',
-            [newStock, item.ingredient_id]
+            'UPDATE ingredients SET stock = ? WHERE id = ? AND user_id = ?',
+            [newStock, item.ingredient_id, userId]
           );
           console.log('Stock update result:', updateResult);
           
           // Verify the update
           const [verifyStock] = await query(
-            'SELECT stock FROM ingredients WHERE id = ?',
-            [item.ingredient_id]
+            'SELECT stock FROM ingredients WHERE id = ? AND user_id = ?',
+            [item.ingredient_id, userId]
           );
           console.log('Verified stock after update:', verifyStock);
         } catch (updateError) {
@@ -108,8 +118,8 @@ const purchaseController = {
 
         // Get the created purchase
         const [newPurchases] = await query(
-          'SELECT * FROM purchases WHERE id = ?',
-          [purchaseResult.insertId]
+          'SELECT * FROM purchases WHERE id = ? AND user_id = ?',
+          [purchaseResult.insertId, userId]
         );
 
         if (newPurchases && newPurchases.length > 0) {
@@ -136,6 +146,7 @@ const purchaseController = {
   // Get all purchases with filters
   getAll: async (req, res) => {
     try {
+      const userId = req.user.id;
       const { start_date, end_date, ingredient_id, limit = 50, offset = 0, timezone_offset } = req.query;
       
       // Convert timezone offset from minutes (JavaScript) to hours for MySQL
@@ -150,9 +161,9 @@ const purchaseController = {
         SELECT p.*, u.name as created_by_name 
         FROM purchases p 
         LEFT JOIN users u ON p.created_by = u.id
-        WHERE 1=1
+        WHERE p.user_id = ?
       `;
-      const params = [];
+      const params = [userId];
 
       if (start_date && end_date) {
         // Convert UTC to user's local timezone, then compare date portion
@@ -187,8 +198,8 @@ const purchaseController = {
       }
 
       // Get total count
-      let countSql = `SELECT COUNT(*) as count FROM purchases p WHERE 1=1`;
-      const countParams = [];
+      let countSql = `SELECT COUNT(*) as count FROM purchases p WHERE p.user_id = ?`;
+      const countParams = [userId];
       
       if (start_date && end_date) {
         countSql += ` AND SUBSTR(DATE_ADD(p.created_at, INTERVAL ${offsetHours} HOUR), 1, 10) >= ? AND SUBSTR(DATE_ADD(p.created_at, INTERVAL ${offsetHours} HOUR), 1, 10) <= ?`;
@@ -221,15 +232,16 @@ const purchaseController = {
   // Get today's purchases
   getTodayPurchases: async (req, res) => {
     try {
+      const userId = req.user.id;
       const today = new Date().toISOString().split('T')[0];
       
       const [purchases] = await query(
         `SELECT p.*, u.name as created_by_name 
          FROM purchases p 
          LEFT JOIN users u ON p.created_by = u.id 
-         WHERE DATE(p.created_at) = ?
+         WHERE DATE(p.created_at) = ? AND p.user_id = ?
          ORDER BY p.created_at DESC`,
-        [today]
+        [today, userId]
       );
 
       res.json(purchases || []);
@@ -243,13 +255,14 @@ const purchaseController = {
   getById: async (req, res) => {
     try {
       const { id } = req.params;
+      const userId = req.user.id;
 
       const [purchases] = await query(
         `SELECT p.*, u.name as created_by_name 
          FROM purchases p 
          LEFT JOIN users u ON p.created_by = u.id 
-         WHERE p.id = ?`,
-        [id]
+         WHERE p.id = ? AND p.user_id = ?`,
+        [id, userId]
       );
 
       if (!purchases || purchases.length === 0) {
@@ -267,8 +280,9 @@ const purchaseController = {
   delete: async (req, res) => {
     try {
       const { id } = req.params;
+      const userId = req.user.id;
 
-      const [existing] = await query('SELECT * FROM purchases WHERE id = ?', [id]);
+      const [existing] = await query('SELECT * FROM purchases WHERE id = ? AND user_id = ?', [id, userId]);
       if (!existing || existing.length === 0) {
         return res.status(404).json({ error: 'Purchase not found' });
       }
@@ -276,18 +290,18 @@ const purchaseController = {
       const purchase = existing[0];
 
       // Restore ingredient stock
-      const [ingredients] = await query('SELECT * FROM ingredients WHERE id = ?', [purchase.ingredient_id]);
+      const [ingredients] = await query('SELECT * FROM ingredients WHERE id = ? AND user_id = ?', [purchase.ingredient_id, userId]);
       if (ingredients && ingredients.length > 0) {
         const currentStock = ingredients[0].stock || 0;
         const newStock = Math.max(0, currentStock - purchase.quantity);
         await query(
-          'UPDATE ingredients SET stock = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-          [newStock, purchase.ingredient_id]
+          'UPDATE ingredients SET stock = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?',
+          [newStock, purchase.ingredient_id, userId]
         );
       }
 
       // Delete purchase record
-      await query('DELETE FROM purchases WHERE id = ?', [id]);
+      await query('DELETE FROM purchases WHERE id = ? AND user_id = ?', [id, userId]);
       
       // Save database
       saveDatabase();

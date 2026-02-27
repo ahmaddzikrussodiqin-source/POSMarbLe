@@ -23,6 +23,17 @@ const orderController = {
         return res.status(400).json({ error: 'Order items are required' });
       }
 
+      // Verify all products belong to the user
+      for (const item of items) {
+        const [productCheck] = await query(
+          'SELECT id FROM products WHERE id = ? AND user_id = ?',
+          [item.id, userId]
+        );
+        if (!productCheck || productCheck.length === 0) {
+          return res.status(400).json({ error: `Product "${item.name}" not found or does not belong to user` });
+        }
+      }
+
       // Calculate total amount
       let totalAmount = 0;
       for (const item of items) {
@@ -35,11 +46,11 @@ const orderController = {
       const orderNumber = orderController.generateOrderNumber();
       console.log('[Order] Order number:', orderNumber);
 
-      // Insert order
+      // Insert order with user_id
       const [orderResult] = await query(
-        `INSERT INTO orders (order_number, total_amount, payment_method, status, created_by) 
-         VALUES (?, ?, ?, 'completed', ?)`,
-        [orderNumber, totalAmount, payment_method || 'cash', userId]
+        `INSERT INTO orders (user_id, order_number, total_amount, payment_method, status, created_by) 
+         VALUES (?, ?, ?, ?, 'completed', ?)`,
+        [userId, orderNumber, totalAmount, payment_method || 'cash', userId]
       );
 
       const orderId = orderResult.insertId;
@@ -56,22 +67,25 @@ const orderController = {
           [orderId, item.id, item.name, item.price, item.quantity, subtotal]
         );
 
-        // Update product stock (for products without ingredients)
+        // Update product stock (for products without ingredients) - only for user's products
         await query(
-          'UPDATE products SET stock = stock - ? WHERE id = ?',
-          [item.quantity, item.id]
+          'UPDATE products SET stock = stock - ? WHERE id = ? AND user_id = ?',
+          [item.quantity, item.id, userId]
         );
 
-        // Update ingredient stock - reduce ingredients used for this product
+        // Update ingredient stock - reduce ingredients used for this product (only user's ingredients)
         const [productIngredients] = await query(
-          'SELECT ingredient_id, quantity_required FROM product_ingredients WHERE product_id = ?',
-          [item.id]
+          `SELECT pi.ingredient_id, pi.quantity_required 
+           FROM product_ingredients pi
+           JOIN products p ON pi.product_id = p.id
+           WHERE pi.product_id = ? AND p.user_id = ?`,
+          [item.id, userId]
         );
 
         for (const pi of productIngredients) {
           await query(
-            'UPDATE ingredients SET stock = stock - ? WHERE id = ?',
-            [pi.quantity_required * item.quantity, pi.ingredient_id]
+            'UPDATE ingredients SET stock = stock - ? WHERE id = ? AND user_id = ?',
+            [pi.quantity_required * item.quantity, pi.ingredient_id, userId]
           );
         }
       }
@@ -87,8 +101,8 @@ const orderController = {
         `SELECT o.*, u.name as created_by_name 
          FROM orders o 
          LEFT JOIN users u ON o.created_by = u.id 
-         WHERE o.id = ?`,
-        [orderId]
+         WHERE o.id = ? AND o.user_id = ?`,
+        [orderId, userId]
       );
 
       const [orderItems] = await query(
@@ -112,15 +126,16 @@ const orderController = {
   // Get all orders
   getAll: async (req, res) => {
     try {
+      const userId = req.user.id;
       const { date, start_date, end_date, status, limit = 50, offset = 0 } = req.query;
       
       let sql = `
         SELECT o.*, u.name as created_by_name 
         FROM orders o 
         LEFT JOIN users u ON o.created_by = u.id
-        WHERE 1=1
+        WHERE o.user_id = ?
       `;
-      const params = [];
+      const params = [userId];
 
       if (date) {
         sql += ' AND DATE(o.created_at) = ?';
@@ -167,13 +182,14 @@ const orderController = {
   getById: async (req, res) => {
     try {
       const { id } = req.params;
+      const userId = req.user.id;
 
       const [orders] = await query(
         `SELECT o.*, u.name as created_by_name 
          FROM orders o 
          LEFT JOIN users u ON o.created_by = u.id 
-         WHERE o.id = ?`,
-        [id]
+         WHERE o.id = ? AND o.user_id = ?`,
+        [id, userId]
       );
 
       if (!orders || orders.length === 0) {
@@ -198,15 +214,16 @@ const orderController = {
   // Get today's orders (for POS dashboard)
   getTodayOrders: async (req, res) => {
     try {
+      const userId = req.user.id;
       const today = new Date().toISOString().split('T')[0];
       
       const [orders] = await query(
         `SELECT o.*, u.name as created_by_name 
          FROM orders o 
          LEFT JOIN users u ON o.created_by = u.id 
-         WHERE DATE(o.created_at) = ? AND o.status = 'completed'
+         WHERE DATE(o.created_at) = ? AND o.user_id = ? AND o.status = 'completed'
          ORDER BY o.created_at DESC`,
-        [today]
+        [today, userId]
       );
 
       // Get items for each order
@@ -229,8 +246,9 @@ const orderController = {
   cancel: async (req, res) => {
     try {
       const { id } = req.params;
+      const userId = req.user.id;
 
-      const [existing] = await query('SELECT * FROM orders WHERE id = ?', [id]);
+      const [existing] = await query('SELECT * FROM orders WHERE id = ? AND user_id = ?', [id, userId]);
       if (!existing || existing.length === 0) {
         return res.status(404).json({ error: 'Order not found' });
       }
@@ -247,22 +265,25 @@ const orderController = {
 
       for (const item of items) {
         if (item.product_id) {
-          // Restore product stock
+          // Restore product stock - only for user's products
           await query(
-            'UPDATE products SET stock = stock + ? WHERE id = ?',
-            [item.quantity, item.product_id]
+            'UPDATE products SET stock = stock + ? WHERE id = ? AND user_id = ?',
+            [item.quantity, item.product_id, userId]
           );
 
-          // Restore ingredient stock
+          // Restore ingredient stock - only for user's ingredients
           const [productIngredients] = await query(
-            'SELECT ingredient_id, quantity_required FROM product_ingredients WHERE product_id = ?',
-            [item.product_id]
+            `SELECT pi.ingredient_id, pi.quantity_required 
+             FROM product_ingredients pi
+             JOIN products p ON pi.product_id = p.id
+             WHERE pi.product_id = ? AND p.user_id = ?`,
+            [item.product_id, userId]
           );
 
           for (const pi of productIngredients) {
             await query(
-              'UPDATE ingredients SET stock = stock + ? WHERE id = ?',
-              [pi.quantity_required * item.quantity, pi.ingredient_id]
+              'UPDATE ingredients SET stock = stock + ? WHERE id = ? AND user_id = ?',
+              [pi.quantity_required * item.quantity, pi.ingredient_id, userId]
             );
           }
         }
@@ -270,8 +291,8 @@ const orderController = {
 
       // Update order status
       await query(
-        'UPDATE orders SET status = ?, payment_status = ? WHERE id = ?',
-        ['cancelled', 'cancelled', id]
+        'UPDATE orders SET status = ?, payment_status = ? WHERE id = ? AND user_id = ?',
+        ['cancelled', 'cancelled', id, userId]
       );
 
       // Save database for SQLite - persist cancellation

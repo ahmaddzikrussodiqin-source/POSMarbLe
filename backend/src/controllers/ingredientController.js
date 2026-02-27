@@ -1,10 +1,14 @@
-const { query } = require('../config/database');
+const { query, saveDatabase } = require('../config/database');
 
 const ingredientController = {
   // Get all ingredients
   getAll: async (req, res) => {
     try {
-      const [ingredients] = await query('SELECT * FROM ingredients ORDER BY name ASC');
+      const userId = req.user.id;
+      const [ingredients] = await query(
+        'SELECT * FROM ingredients WHERE user_id = ? ORDER BY name ASC',
+        [userId]
+      );
       res.json(ingredients || []);
     } catch (error) {
       console.error('Get ingredients error:', error);
@@ -16,7 +20,11 @@ const ingredientController = {
   getById: async (req, res) => {
     try {
       const { id } = req.params;
-      const [ingredients] = await query('SELECT * FROM ingredients WHERE id = ?', [id]);
+      const userId = req.user.id;
+      const [ingredients] = await query(
+        'SELECT * FROM ingredients WHERE id = ? AND user_id = ?',
+        [id, userId]
+      );
       
       if (!ingredients || ingredients.length === 0) {
         return res.status(404).json({ error: 'Ingredient not found' });
@@ -32,6 +40,7 @@ const ingredientController = {
   // Create ingredient
   create: async (req, res) => {
     try {
+      const userId = req.user.id;
       const { name, unit, stock } = req.body;
       
       if (!name) {
@@ -39,12 +48,13 @@ const ingredientController = {
       }
 
       const [result] = await query(
-        `INSERT INTO ingredients (name, unit, stock) 
-         VALUES (?, ?, ?)`,
-        [name, unit || 'gram', stock || 0]
+        `INSERT INTO ingredients (user_id, name, unit, stock) 
+         VALUES (?, ?, ?, ?)`,
+        [userId, name, unit || 'gram', stock || 0]
       );
 
       const [newIngredient] = await query('SELECT * FROM ingredients WHERE id = ?', [result.insertId]);
+      saveDatabase();
       res.status(201).json(newIngredient[0]);
     } catch (error) {
       console.error('Create ingredient error:', error);
@@ -56,9 +66,10 @@ const ingredientController = {
   update: async (req, res) => {
     try {
       const { id } = req.params;
+      const userId = req.user.id;
       const { name, unit, stock } = req.body;
 
-      const [existing] = await query('SELECT * FROM ingredients WHERE id = ?', [id]);
+      const [existing] = await query('SELECT * FROM ingredients WHERE id = ? AND user_id = ?', [id, userId]);
       if (!existing || existing.length === 0) {
         return res.status(404).json({ error: 'Ingredient not found' });
       }
@@ -68,11 +79,12 @@ const ingredientController = {
          SET name = COALESCE(?, name), 
              unit = COALESCE(?, unit),
              stock = COALESCE(?, stock)
-         WHERE id = ?`,
-        [name, unit, stock, id]
+         WHERE id = ? AND user_id = ?`,
+        [name, unit, stock, id, userId]
       );
 
       const [updatedIngredient] = await query('SELECT * FROM ingredients WHERE id = ?', [id]);
+      saveDatabase();
       res.json(updatedIngredient[0]);
     } catch (error) {
       console.error('Update ingredient error:', error);
@@ -84,13 +96,15 @@ const ingredientController = {
   delete: async (req, res) => {
     try {
       const { id } = req.params;
+      const userId = req.user.id;
 
-      const [existing] = await query('SELECT * FROM ingredients WHERE id = ?', [id]);
+      const [existing] = await query('SELECT * FROM ingredients WHERE id = ? AND user_id = ?', [id, userId]);
       if (!existing || existing.length === 0) {
         return res.status(404).json({ error: 'Ingredient not found' });
       }
 
-      await query('DELETE FROM ingredients WHERE id = ?', [id]);
+      await query('DELETE FROM ingredients WHERE id = ? AND user_id = ?', [id, userId]);
+      saveDatabase();
       res.json({ message: 'Ingredient deleted successfully' });
     } catch (error) {
       console.error('Delete ingredient error:', error);
@@ -102,20 +116,22 @@ const ingredientController = {
   updateStock: async (req, res) => {
     try {
       const { id } = req.params;
+      const userId = req.user.id;
       const { stock } = req.body;
 
       if (stock === undefined) {
         return res.status(400).json({ error: 'Stock value is required' });
       }
 
-      const [existing] = await query('SELECT * FROM ingredients WHERE id = ?', [id]);
+      const [existing] = await query('SELECT * FROM ingredients WHERE id = ? AND user_id = ?', [id, userId]);
       if (!existing || existing.length === 0) {
         return res.status(404).json({ error: 'Ingredient not found' });
       }
 
-      await query('UPDATE ingredients SET stock = ? WHERE id = ?', [stock, id]);
+      await query('UPDATE ingredients SET stock = ? WHERE id = ? AND user_id = ?', [stock, id, userId]);
       
       const [updatedIngredient] = await query('SELECT * FROM ingredients WHERE id = ?', [id]);
+      saveDatabase();
       res.json(updatedIngredient[0]);
     } catch (error) {
       console.error('Update stock error:', error);
@@ -127,13 +143,14 @@ const ingredientController = {
   purchaseStock: async (req, res) => {
     try {
       const { id } = req.params;
+      const userId = req.user.id;
       const { quantity } = req.body;
 
       if (quantity === undefined || quantity <= 0) {
         return res.status(400).json({ error: 'Valid quantity is required' });
       }
 
-      const [existing] = await query('SELECT * FROM ingredients WHERE id = ?', [id]);
+      const [existing] = await query('SELECT * FROM ingredients WHERE id = ? AND user_id = ?', [id, userId]);
       if (!existing || existing.length === 0) {
         return res.status(404).json({ error: 'Ingredient not found' });
       }
@@ -141,9 +158,10 @@ const ingredientController = {
       const currentStock = existing[0].stock || 0;
       const newStock = currentStock + parseFloat(quantity);
 
-      await query('UPDATE ingredients SET stock = ? WHERE id = ?', [newStock, id]);
+      await query('UPDATE ingredients SET stock = ? WHERE id = ? AND user_id = ?', [newStock, id, userId]);
       
       const [updatedIngredient] = await query('SELECT * FROM ingredients WHERE id = ?', [id]);
+      saveDatabase();
       res.json({
         ...updatedIngredient[0],
         previous_stock: currentStock,
@@ -160,12 +178,13 @@ const ingredientController = {
   getProductIngredients: async (req, res) => {
     try {
       const { productId } = req.params;
+      const userId = req.user.id;
       const [ingredients] = await query(
         `SELECT pi.*, i.name, i.unit, i.stock as ingredient_stock
          FROM product_ingredients pi
          JOIN ingredients i ON pi.ingredient_id = i.id
-         WHERE pi.product_id = ?`,
-        [productId]
+         WHERE pi.product_id = ? AND i.user_id = ?`,
+        [productId, userId]
       );
       res.json(ingredients || []);
     } catch (error) {
@@ -178,7 +197,14 @@ const ingredientController = {
   setProductIngredients: async (req, res) => {
     try {
       const { productId } = req.params;
+      const userId = req.user.id;
       const { ingredients } = req.body; // Array of { ingredient_id, quantity_required }
+
+      // Verify product belongs to user
+      const [productCheck] = await query('SELECT id FROM products WHERE id = ? AND user_id = ?', [productId, userId]);
+      if (!productCheck || productCheck.length === 0) {
+        return res.status(404).json({ error: 'Product not found' });
+      }
 
       // Delete existing product ingredients
       await query('DELETE FROM product_ingredients WHERE product_id = ?', [productId]);
@@ -186,6 +212,11 @@ const ingredientController = {
       // Insert new product ingredients
       if (ingredients && ingredients.length > 0) {
         for (const ing of ingredients) {
+          // Verify ingredient belongs to user
+          const [ingCheck] = await query('SELECT id FROM ingredients WHERE id = ? AND user_id = ?', [ing.ingredient_id, userId]);
+          if (!ingCheck || ingCheck.length === 0) {
+            return res.status(400).json({ error: 'Ingredient not found or does not belong to user' });
+          }
           await query(
             `INSERT INTO product_ingredients (product_id, ingredient_id, quantity_required) 
              VALUES (?, ?, ?)`,
@@ -203,6 +234,7 @@ const ingredientController = {
         [productId]
       );
       
+      saveDatabase();
       res.json(productIngredients || []);
     } catch (error) {
       console.error('Set product ingredients error:', error);
