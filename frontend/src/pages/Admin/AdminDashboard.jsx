@@ -366,8 +366,8 @@ const AdminDashboard = () => {
                     {/* Daily Sales Trend */}
                     <div className="bg-white p-6 rounded-xl shadow">
                       <h3 className="text-lg font-bold text-gray-800 mb-4">Trend Penjualan 30 Hari Terakhir</h3>
-                      <div className="h-64">
-                        <ResponsiveContainer width="100%" height="100%">
+                      <div className="h-64 min-w-0">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                           <AreaChart data={dailySales.map(item => ({ ...item, date: formatShortDate(item.date) }))}>
                             <defs><linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#0088FE" stopOpacity={0.8}/><stop offset="95%" stopColor="#0088FE" stopOpacity={0}/></linearGradient></defs>
                             <CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="date" /><YAxis />
@@ -375,7 +375,6 @@ const AdminDashboard = () => {
                             <Area type="monotone" dataKey="total" stroke="#0088FE" fillOpacity={1} fill="url(#colorSales)" name="Penjualan" />
                           </AreaChart>
                         </ResponsiveContainer>
-                      </div> REPLACE
                       </div>
                     </div>
 
