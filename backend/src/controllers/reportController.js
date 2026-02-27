@@ -130,11 +130,14 @@ const reportController = {
       const userId = req.user.id;
       const today = new Date().toISOString().split('T')[0];
       
+      // Use strftime for SQLite compatibility, HOUR for MySQL
+      const hourFunction = useSQLite ? "strftime('%H', created_at)" : "HOUR(created_at)";
+      
       const [sales] = await query(
-        `SELECT HOUR(created_at) as hour, COUNT(*) as orders, COALESCE(SUM(total_amount), 0) as total 
+        `SELECT ${hourFunction} as hour, COUNT(*) as orders, COALESCE(SUM(total_amount), 0) as total 
          FROM orders 
          WHERE user_id = ? AND status = 'completed' AND DATE(created_at) = ?
-         GROUP BY HOUR(created_at)
+         GROUP BY ${hourFunction}
          ORDER BY hour ASC`,
         [userId, today]
       );
@@ -142,7 +145,7 @@ const reportController = {
       // Fill in missing hours
       const hourlyData = [];
       for (let i = 0; i < 24; i++) {
-        const existing = sales?.find(s => s.hour === i);
+        const existing = sales?.find(s => parseInt(s.hour) === i);
         hourlyData.push({
           hour: i,
           orders: existing ? existing.orders : 0,

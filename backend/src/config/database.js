@@ -269,6 +269,76 @@ const initDatabase = async () => {
 
       console.log('SQLite database tables initialized successfully');
 
+      // Migration: Add user_id column to ingredients table if it doesn't exist
+      try {
+        const tableInfo = db.exec("PRAGMA table_info(ingredients)");
+        const hasUserId = tableInfo[0]?.values.some(col => col[1] === 'user_id');
+        if (!hasUserId) {
+          console.log('Migrating: Adding user_id column to ingredients table...');
+          db.run('ALTER TABLE ingredients ADD COLUMN user_id INTEGER DEFAULT 1');
+          db.run('UPDATE ingredients SET user_id = 1 WHERE user_id IS NULL');
+          console.log('Migration complete: user_id column added to ingredients');
+        }
+      } catch (migrationError) {
+        console.log('Migration check/error:', migrationError.message);
+      }
+
+      // Migration: Add user_id column to categories table if it doesn't exist
+      try {
+        const tableInfo = db.exec("PRAGMA table_info(categories)");
+        const hasUserId = tableInfo[0]?.values.some(col => col[1] === 'user_id');
+        if (!hasUserId) {
+          console.log('Migrating: Adding user_id column to categories table...');
+          db.run('ALTER TABLE categories ADD COLUMN user_id INTEGER DEFAULT 1');
+          db.run('UPDATE categories SET user_id = 1 WHERE user_id IS NULL');
+          console.log('Migration complete: user_id column added to categories');
+        }
+      } catch (migrationError) {
+        console.log('Migration check/error:', migrationError.message);
+      }
+
+      // Migration: Add user_id column to products table if it doesn't exist
+      try {
+        const tableInfo = db.exec("PRAGMA table_info(products)");
+        const hasUserId = tableInfo[0]?.values.some(col => col[1] === 'user_id');
+        if (!hasUserId) {
+          console.log('Migrating: Adding user_id column to products table...');
+          db.run('ALTER TABLE products ADD COLUMN user_id INTEGER DEFAULT 1');
+          db.run('UPDATE products SET user_id = 1 WHERE user_id IS NULL');
+          console.log('Migration complete: user_id column added to products');
+        }
+      } catch (migrationError) {
+        console.log('Migration check/error:', migrationError.message);
+      }
+
+      // Migration: Add user_id column to orders table if it doesn't exist
+      try {
+        const tableInfo = db.exec("PRAGMA table_info(orders)");
+        const hasUserId = tableInfo[0]?.values.some(col => col[1] === 'user_id');
+        if (!hasUserId) {
+          console.log('Migrating: Adding user_id column to orders table...');
+          db.run('ALTER TABLE orders ADD COLUMN user_id INTEGER DEFAULT 1');
+          db.run('UPDATE orders SET user_id = 1 WHERE user_id IS NULL');
+          console.log('Migration complete: user_id column added to orders');
+        }
+      } catch (migrationError) {
+        console.log('Migration check/error:', migrationError.message);
+      }
+
+      // Migration: Add user_id column to purchases table if it doesn't exist
+      try {
+        const tableInfo = db.exec("PRAGMA table_info(purchases)");
+        const hasUserId = tableInfo[0]?.values.some(col => col[1] === 'user_id');
+        if (!hasUserId) {
+          console.log('Migrating: Adding user_id column to purchases table...');
+          db.run('ALTER TABLE purchases ADD COLUMN user_id INTEGER DEFAULT 1');
+          db.run('UPDATE purchases SET user_id = 1 WHERE user_id IS NULL');
+          console.log('Migration complete: user_id column added to purchases');
+        }
+      } catch (migrationError) {
+        console.log('Migration check/error:', migrationError.message);
+      }
+
       // Create default admin user if not exists
       const stmt = db.prepare('SELECT * FROM users WHERE username = ?');
       stmt.bind(['admin']);
