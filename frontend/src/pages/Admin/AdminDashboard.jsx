@@ -374,12 +374,12 @@ const AdminDashboard = () => {
                     </div>
                   </div>
 
-                  {/* Charts Grid */}
-                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
+                  {/* Charts Grid - Single column to prevent overflow */}
+                  <div className="space-y-6 mb-8">
                     {/* Daily Sales Trend */}
                     <div className="bg-white p-4 rounded-xl shadow overflow-hidden">
                       <h3 className="text-lg font-bold text-gray-800 mb-2">Trend Penjualan Bulan {formatMonthYear(selectedMonth, selectedYear)}</h3>
-                      <div className="h-56 w-full" style={{ minHeight: '224px' }}>
+                      <div className="h-64 w-full" style={{ minHeight: '256px' }}>
                         {!loading && chartsReady && dailySales.length > 0 ? (
                           <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={dailySales.map(item => ({ ...item, date: formatShortDate(item.date) }))} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
@@ -398,7 +398,7 @@ const AdminDashboard = () => {
                     {/* Hourly Sales Today */}
                     <div className="bg-white p-4 rounded-xl shadow overflow-hidden">
                       <h3 className="text-lg font-bold text-gray-800 mb-2">Penjualan per Jam (Hari Ini)</h3>
-                      <div className="h-56 w-full" style={{ minHeight: '224px' }}>
+                      <div className="h-64 w-full" style={{ minHeight: '256px' }}>
                         {!loading && chartsReady && hourlySales.length > 0 ? (
                           <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={hourlySales} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" stroke="#eee" /><XAxis dataKey="hour" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} /><Tooltip formatter={(value) => formatCurrency(value)} contentStyle={{ fontSize: '12px' }} /><Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} /><Bar dataKey="total" fill="#00C49F" name="Penjualan" /></BarChart>
@@ -412,7 +412,7 @@ const AdminDashboard = () => {
                     {/* Best Selling Products */}
                     <div className="bg-white p-4 rounded-xl shadow overflow-hidden">
                       <h3 className="text-lg font-bold text-gray-800 mb-2">Produk Terlaris</h3>
-                      <div className="h-56 w-full" style={{ minHeight: '224px' }}>
+                      <div className="h-64 w-full" style={{ minHeight: '256px' }}>
                         {!loading && chartsReady && bestSellingProducts.length > 0 ? (
                           <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={bestSellingProducts} layout="vertical" margin={{ top: 5, right: 10, left: 5, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" stroke="#eee" /><XAxis type="number" tick={{ fontSize: 10 }} /><YAxis dataKey="product_name" type="category" width={80} tick={{ fontSize: 10 }} /><Tooltip formatter={(value, name) => [value, name === 'total_quantity' ? 'Jumlah' : 'Total']} contentStyle={{ fontSize: '12px' }} /><Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} /><Bar dataKey="total_quantity" fill="#FFBB28" name="Terjual" /></BarChart>
@@ -426,7 +426,7 @@ const AdminDashboard = () => {
                     {/* Payment Methods */}
                     <div className="bg-white p-4 rounded-xl shadow overflow-hidden">
                       <h3 className="text-lg font-bold text-gray-800 mb-2">Metode Pembayaran</h3>
-                      <div className="h-56 w-full flex items-center justify-center" style={{ minHeight: '224px' }}>
+                      <div className="h-64 w-full flex items-center justify-center" style={{ minHeight: '256px' }}>
                         {!loading && chartsReady && paymentData.length > 0 ? (
                           <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
@@ -441,38 +441,38 @@ const AdminDashboard = () => {
                         )}
                       </div>
                     </div>
-                  </div>
 
-                  {/* Daily Purchases Trend */}
-                  <div className="bg-white p-4 rounded-xl shadow mb-8 overflow-hidden">
-                    <h3 className="text-lg font-bold text-gray-800 mb-2">Trend Pembelian Bulan {formatMonthYear(selectedMonth, selectedYear)}</h3>
-                    <div className="h-56 w-full" style={{ minHeight: '224px' }}>
-                      {!loading && chartsReady && dailyPurchases.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={dailyPurchases.map(item => ({ ...item, date: formatShortDate(item.date) }))} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                            <defs><linearGradient id="colorPurchases" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#FF8042" stopOpacity={0.8}/><stop offset="95%" stopColor="#FF8042" stopOpacity={0}/></linearGradient></defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#eee" /><XAxis dataKey="date" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} />
-                            <Tooltip formatter={(value) => formatCurrency(value)} contentStyle={{ fontSize: '12px' }} /><Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} />
-                            <Area type="monotone" dataKey="total" stroke="#FF8042" fillOpacity={1} fill="url(#colorPurchases)" name="Pembelian" />
-                          </AreaChart>
-                        </ResponsiveContainer>
-                      ) : (
-                        <div className="h-full flex items-center justify-center text-gray-400">{loading ? 'Memuat...' : 'Tidak ada data'}</div>
-                      )}
+                    {/* Daily Purchases Trend */}
+                    <div className="bg-white p-4 rounded-xl shadow overflow-hidden">
+                      <h3 className="text-lg font-bold text-gray-800 mb-2">Trend Pembelian Bulan {formatMonthYear(selectedMonth, selectedYear)}</h3>
+                      <div className="h-64 w-full" style={{ minHeight: '256px' }}>
+                        {!loading && chartsReady && dailyPurchases.length > 0 ? (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={dailyPurchases.map(item => ({ ...item, date: formatShortDate(item.date) }))} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                              <defs><linearGradient id="colorPurchases" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#FF8042" stopOpacity={0.8}/><stop offset="95%" stopColor="#FF8042" stopOpacity={0}/></linearGradient></defs>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#eee" /><XAxis dataKey="date" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} />
+                              <Tooltip formatter={(value) => formatCurrency(value)} contentStyle={{ fontSize: '12px' }} /><Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} />
+                              <Area type="monotone" dataKey="total" stroke="#FF8042" fillOpacity={1} fill="url(#colorPurchases)" name="Pembelian" />
+                            </AreaChart>
+                          </ResponsiveContainer>
+                        ) : (
+                          <div className="h-full flex items-center justify-center text-gray-400">{loading ? 'Memuat...' : 'Tidak ada data'}</div>
+                        )}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Top Cashiers */}
-                  <div className="bg-white p-4 rounded-xl shadow mb-8 overflow-hidden">
-                    <h3 className="text-lg font-bold text-gray-800 mb-2">Kasir Terbaik</h3>
-                    <div className="h-56 w-full" style={{ minHeight: '224px' }}>
-                      {!loading && chartsReady && topCashiers.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={topCashiers} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" stroke="#eee" /><XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} /><Tooltip formatter={(value, name) => [name === 'total_sales' ? formatCurrency(value) : value, name === 'total_sales' ? 'Penjualan' : 'Pesanan']} contentStyle={{ fontSize: '12px' }} /><Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} /><Bar dataKey="total_sales" fill="#8884D8" name="Penjualan" /><Bar dataKey="total_orders" fill="#82CA9D" name="Pesanan" /></BarChart>
-                        </ResponsiveContainer>
-                      ) : (
-                        <div className="h-full flex items-center justify-center text-gray-400">{loading ? 'Memuat...' : 'Tidak ada data'}</div>
-                      )}
+                    {/* Top Cashiers */}
+                    <div className="bg-white p-4 rounded-xl shadow overflow-hidden">
+                      <h3 className="text-lg font-bold text-gray-800 mb-2">Kasir Terbaik</h3>
+                      <div className="h-64 w-full" style={{ minHeight: '256px' }}>
+                        {!loading && chartsReady && topCashiers.length > 0 ? (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={topCashiers} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" stroke="#eee" /><XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} /><Tooltip formatter={(value, name) => [name === 'total_sales' ? formatCurrency(value) : value, name === 'total_sales' ? 'Penjualan' : 'Pesanan']} contentStyle={{ fontSize: '12px' }} /><Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} /><Bar dataKey="total_sales" fill="#8884D8" name="Penjualan" /><Bar dataKey="total_orders" fill="#82CA9D" name="Pesanan" /></BarChart>
+                          </ResponsiveContainer>
+                        ) : (
+                          <div className="h-full flex items-center justify-center text-gray-400">{loading ? 'Memuat...' : 'Tidak ada data'}</div>
+                        )}
+                      </div>
                     </div>
                   </div>
 
