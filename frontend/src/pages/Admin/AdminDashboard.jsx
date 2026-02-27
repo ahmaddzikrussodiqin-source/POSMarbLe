@@ -374,10 +374,10 @@ const AdminDashboard = () => {
                     </div>
                   </div>
 
-                  {/* Charts Grid - Single column to prevent overflow */}
-                  <div className="space-y-6 mb-8" style={{ overflow: 'hidden' }}>
-                    {/* Daily Sales Trend */}
-                    <div className="bg-white p-4 rounded-xl shadow" style={{ overflow: 'hidden' }}>
+                  {/* Charts Grid - Using grid layout for better organization */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    {/* Daily Sales Trend - Full width on mobile, half on large screens */}
+                    <div className="bg-white p-4 rounded-xl shadow overflow-hidden lg:col-span-2">
                       <h3 className="text-lg font-bold text-gray-800 mb-2">Trend Penjualan Bulan {formatMonthYear(selectedMonth, selectedYear)}</h3>
                       <div className="h-64 w-full" style={{ height: '256px', minHeight: '256px', maxHeight: '256px', overflow: 'hidden' }}>
                         {!loading && chartsReady && dailySales.length > 0 ? (
@@ -396,7 +396,7 @@ const AdminDashboard = () => {
                     </div>
 
                     {/* Hourly Sales Today */}
-                    <div className="bg-white p-4 rounded-xl shadow" style={{ overflow: 'hidden' }}>
+                    <div className="bg-white p-4 rounded-xl shadow overflow-hidden">
                       <h3 className="text-lg font-bold text-gray-800 mb-2">Penjualan per Jam (Hari Ini)</h3>
                       <div className="h-64 w-full" style={{ height: '256px', minHeight: '256px', maxHeight: '256px', overflow: 'hidden' }}>
                         {!loading && chartsReady && hourlySales.length > 0 ? (
@@ -410,7 +410,7 @@ const AdminDashboard = () => {
                     </div>
 
                     {/* Best Selling Products */}
-                    <div className="bg-white p-4 rounded-xl shadow" style={{ overflow: 'hidden' }}>
+                    <div className="bg-white p-4 rounded-xl shadow overflow-hidden">
                       <h3 className="text-lg font-bold text-gray-800 mb-2">Produk Terlaris</h3>
                       <div className="h-64 w-full" style={{ height: '256px', minHeight: '256px', maxHeight: '256px', overflow: 'hidden' }}>
                         {!loading && chartsReady && bestSellingProducts.length > 0 ? (
@@ -424,7 +424,7 @@ const AdminDashboard = () => {
                     </div>
 
                     {/* Payment Methods */}
-                    <div className="bg-white p-4 rounded-xl shadow" style={{ overflow: 'hidden' }}>
+                    <div className="bg-white p-4 rounded-xl shadow overflow-hidden">
                       <h3 className="text-lg font-bold text-gray-800 mb-2">Metode Pembayaran</h3>
                       <div className="h-64 w-full flex items-center justify-center" style={{ height: '256px', minHeight: '256px', maxHeight: '256px', overflow: 'hidden' }}>
                         {!loading && chartsReady && paymentData.length > 0 ? (
@@ -443,7 +443,7 @@ const AdminDashboard = () => {
                     </div>
 
                     {/* Daily Purchases Trend */}
-                    <div className="bg-white p-4 rounded-xl shadow" style={{ overflow: 'hidden' }}>
+                    <div className="bg-white p-4 rounded-xl shadow overflow-hidden">
                       <h3 className="text-lg font-bold text-gray-800 mb-2">Trend Pembelian Bulan {formatMonthYear(selectedMonth, selectedYear)}</h3>
                       <div className="h-64 w-full" style={{ height: '256px', minHeight: '256px', maxHeight: '256px', overflow: 'hidden' }}>
                         {!loading && chartsReady && dailyPurchases.length > 0 ? (
@@ -462,7 +462,7 @@ const AdminDashboard = () => {
                     </div>
 
                     {/* Top Cashiers */}
-                    <div className="bg-white p-4 rounded-xl shadow" style={{ overflow: 'hidden' }}>
+                    <div className="bg-white p-4 rounded-xl shadow overflow-hidden">
                       <h3 className="text-lg font-bold text-gray-800 mb-2">Kasir Terbaik</h3>
                       <div className="h-64 w-full" style={{ height: '256px', minHeight: '256px', maxHeight: '256px', overflow: 'hidden' }}>
                         {!loading && chartsReady && topCashiers.length > 0 ? (
