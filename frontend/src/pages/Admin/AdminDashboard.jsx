@@ -656,7 +656,7 @@ const AdminDashboard = () => {
           </button>
           <span className="text-sm">Admin: {user?.name}</span>
           <button
-            onClick={logout}
+            onClick={() => { logout(); navigate('/'); }}
             className="bg-amber-800 px-4 py-2 rounded-lg hover:bg-amber-900 transition"
           >
             Logout
