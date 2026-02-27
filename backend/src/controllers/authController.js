@@ -5,6 +5,44 @@ const { query, useSQLite } = require('../config/database');
 const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_key_change_this_in_production';
 
 const authController = {
+  // Register new user (public)
+  register: async (req, res) => {
+    try {
+      const { username, password, name } = req.body;
+
+      if (!username || !password || !name) {
+        return res.status(400).json({ error: 'Username, password, and name are required' });
+      }
+
+      // Check if username already exists
+      const [existing] = await query('SELECT * FROM users WHERE username = ?', [username]);
+      if (existing && existing.length > 0) {
+        return res.status(400).json({ error: 'Username already exists' });
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+      
+      // Default role is 'cashier'
+      const [result] = await query(
+        'INSERT INTO users (username, password, name, role) VALUES (?, ?, ?, ?)',
+        [username, hashedPassword, name, 'cashier']
+      );
+
+      res.status(201).json({
+        message: 'User registered successfully',
+        user: {
+          id: result.insertId,
+          username,
+          name,
+          role: 'cashier'
+        }
+      });
+    } catch (error) {
+      console.error('Register error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  },
+
   // Login
   login: async (req, res) => {
     try {

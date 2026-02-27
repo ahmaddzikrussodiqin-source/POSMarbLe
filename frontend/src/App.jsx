@@ -1,7 +1,9 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import Landing from './pages/Home/Landing';
 import Login from './pages/Auth/Login';
+import Register from './pages/Auth/Register';
 import POS from './pages/POS/POS';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import VersionBadge from './components/VersionBadge';
@@ -12,7 +14,10 @@ function App() {
     <AuthProvider>
       <Router>
         <Routes>
+          {/* Public routes */}
+          <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
           
           {/* POS Route - accessible to both admin and cashier */}
           <Route
@@ -34,11 +39,8 @@ function App() {
             }
           />
           
-          {/* Redirect root to login or pos based on auth */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          
           {/* Default redirect for unknown routes */}
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         
         {/* Version display and update notification - only shows in Android app */}
