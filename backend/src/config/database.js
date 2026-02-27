@@ -18,6 +18,7 @@ const useSQLite = process.env.USE_SQLITE === 'true' && process.env.NODE_ENV !== 
 let pool;
 let db;
 let SQL;
+let dbInitPromise = null;
 
 // Initialize MySQL pool if not using SQLite
 if (!useSQLite) {
@@ -39,33 +40,45 @@ if (!useSQLite) {
 }
 
 const useSQLiteAsync = async () => {
-  if (!SQL) {
-    SQL = await initSqlJs();
+  // If already initializing, wait for it
+  if (dbInitPromise) {
+    return dbInitPromise;
   }
   
-  const dbPath = process.env.SQLITE_PATH || path.join(__dirname, '../../posmarble.db');
-  
-  // Load existing database or create new one
-  if (fs.existsSync(dbPath)) {
-    const fileBuffer = fs.readFileSync(dbPath);
-    db = new SQL.Database(fileBuffer);
-  } else {
-    db = new SQL.Database();
+  // If already initialized, return existing db
+  if (db && SQL) {
+    return db;
   }
   
-  console.log('Using SQLite database at:', dbPath);
-  return db;
+  // Create new initialization promise
+  dbInitPromise = (async () => {
+    if (!SQL) {
+      SQL = await initSqlJs();
+    }
+    
+    const dbPath = process.env.SQLITE_PATH || path.join(__dirname, '../../posmarble.db');
+    
+    // Load existing database or create new one
+    if (fs.existsSync(dbPath)) {
+      const fileBuffer = fs.readFileSync(dbPath);
+      db = new SQL.Database(fileBuffer);
+    } else {
+      db = new SQL.Database();
+    }
+    
+    console.log('Using SQLite database at:', dbPath);
+    return db;
+  })();
+  
+  return dbInitPromise;
 };
 
 // Helper to run queries based on database type
 const query = async (sql, params = []) => {
   if (useSQLite) {
     try {
-      // Ensure db is initialized
-      if (!db) {
-        console.log('Initializing SQLite database for query...');
-        await useSQLiteAsync();
-      }
+      // Ensure db is initialized (with race condition protection)
+      await useSQLiteAsync();
       
       // Convert undefined values to null for SQLite
       const safeParams = params.map(p => p === undefined ? null : p);
@@ -93,7 +106,8 @@ const query = async (sql, params = []) => {
           const firstResult = results.length > 0 ? results[0] : {};
           return [{ insertId, ...firstResult }];
         }
-        return [{ insertId: results.length > 0 ? results[0].id : undefined }];
+        // Safe fallback - always return an object with insertId
+        return [{ insertId: undefined }];
       }
       
       return [results];

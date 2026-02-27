@@ -1,34 +1,43 @@
-# Fix 500 Error on Registration - DONE
+# Fix 500 Error on Login - DONE
 
-## Task: Fix "server responded with a status of 500" error when creating a new account (register)
+## Task: Fix "server responded with a status of 500" error when logging in with existing user
 
 ### Steps:
-1. [x] Analyze codebase and understand registration flow
-2. [x] Edit database.js to fix INSERT query bug (results[0] was undefined)
-3. [x] Edit authController.js to add:
-   - [x] Add detailed console logging for debugging
-   - [x] Wrap nota_settings creation in try-catch
-   - [x] Add better error messages
+1. [x] Analyze codebase and understand login flow
+2. [x] Edit database.js to fix race condition in SQLite initialization
+3. [x] Edit authController.js to add user ID validation
+4. [x] Edit auth.js middleware to add better error handling and validation
 
 ### Issue Summary:
-- Error occurs when filling the registration form and clicking "Daftar"
-- Server returns 500 Internal Server Error
-- Expected behavior: Create new user account successfully
+- Error occurs after login when loading dashboard data (orders, sales-summary, financial-summary)
+- Server returns 500 Internal Server Error on multiple API endpoints
+- Expected behavior: Successfully load dashboard data after login
 
 ### Root Cause Found:
-In `database.js`, the SQLite query function was trying to spread `results[0]` when results array was empty (INSERT statements don't return rows). This caused: `TypeError: Cannot read property 'id' of undefined`
+In `database.js`, the SQLite database initialization had a race condition. When multiple requests came in simultaneously after login, the `useSQLiteAsync()` function could be called multiple times before the first initialization completed, causing database connection issues and corrupted query results.
 
 ### Changes Made:
-1. Fixed `database.js`: Added check for empty results array before spreading
-   - Changed `return [{ insertId, ...results[0] }]` to handle empty results
-2. Enhanced `authController.js` register function:
-   - Added detailed console logging with `[Register]` prefix
-   - Wrapped nota_settings creation in try-catch (failure won't break registration)
-   - Made error messages more descriptive with actual error details
-   - Added saveDatabase() call confirmation logs
+
+1. **Fixed `database.js`**: Added race condition protection for SQLite initialization
+   - Added `dbInitPromise` variable to track initialization state
+   - Modified `useSQLiteAsync()` to return existing promise if already initializing
+   - Added safe fallback for INSERT statements: `return [{ insertId: undefined }]`
+   - Ensured database is fully initialized before any query runs
+
+2. **Enhanced `authController.js` login function**:
+   - Added validation to ensure `user.id` exists before creating JWT token
+   - Added console logging for token creation debugging
+   - Better error message when user data is corrupted
+
+3. **Enhanced `auth.js` middleware**:
+   - Added validation to check `decoded.userId` exists in token
+   - Added validation to check `user.id` exists after database lookup
+   - Added detailed console logging with `[Auth]` prefix for debugging
+   - Better error messages for different failure scenarios
 
 ### Testing:
 - Restart the backend server to apply changes
-- Try creating a new account via the registration form
-- Check server console for detailed logs starting with [Register]
-
+- Login with existing user account
+- Verify dashboard loads without 500 errors
+- Check server console for `[Auth]` and `[Login]` debug logs
+- All API endpoints (orders, sales-summary, financial-summary) should return 200 OK

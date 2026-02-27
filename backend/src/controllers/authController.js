@@ -93,11 +93,20 @@ const authController = {
       }
 
       const user = users[0];
+      
+      // Validate user data before creating token
+      if (!user.id) {
+        console.error('[Login] User found but ID is missing:', user);
+        return res.status(500).json({ error: 'User data is corrupted. Please contact support.' });
+      }
+      
       const isPasswordValid = await bcrypt.compare(password, user.password);
 
       if (!isPasswordValid) {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
+
+      console.log('[Login] Creating token for user:', { userId: user.id, username: user.username, role: user.role });
 
       const token = jwt.sign(
         { userId: user.id, username: user.username, role: user.role },
@@ -161,4 +170,3 @@ const authController = {
 };
 
 module.exports = authController;
-
