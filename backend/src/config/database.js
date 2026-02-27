@@ -547,6 +547,25 @@ const initDatabase = async () => {
         )
       `);
 
+      // Migration: Add user_id column to orders table if it doesn't exist (MySQL)
+      try {
+        const [columns] = await connection.query(`
+          SELECT COLUMN_NAME 
+          FROM INFORMATION_SCHEMA.COLUMNS 
+          WHERE TABLE_NAME = 'orders' AND COLUMN_NAME = 'user_id'
+        `);
+        if (columns.length === 0) {
+          console.log('Migrating MySQL: Adding user_id column to orders table...');
+          await connection.query('ALTER TABLE orders ADD COLUMN user_id INT DEFAULT 1');
+          await connection.query('UPDATE orders SET user_id = 1 WHERE user_id IS NULL');
+          console.log('Migration complete: user_id column added to orders (MySQL)');
+        } else {
+          console.log('Migration: MySQL orders table already has user_id column');
+        }
+      } catch (migrationError) {
+        console.log('Migration check/error for MySQL orders:', migrationError.message);
+      }
+
       console.log('MySQL database tables initialized successfully');
       
       const [users] = await connection.query('SELECT * FROM users WHERE username = ?', ['admin']);
