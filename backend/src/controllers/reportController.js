@@ -68,13 +68,19 @@ const reportController = {
       const userId = req.user.id;
       const { days = 30 } = req.query;
       
+      // Calculate the date in JavaScript to be SQLite/MySQL compatible
+      const daysNum = parseInt(days);
+      const pastDate = new Date();
+      pastDate.setDate(pastDate.getDate() - daysNum);
+      const pastDateStr = pastDate.toISOString().split('T')[0];
+      
       const [sales] = await query(
         `SELECT DATE(created_at) as date, COUNT(*) as orders, COALESCE(SUM(total_amount), 0) as total 
          FROM orders 
-         WHERE user_id = ? AND status = 'completed' AND created_at >= DATE_SUB(CURRENT_DATE, INTERVAL ? DAY)
+         WHERE user_id = ? AND status = 'completed' AND DATE(created_at) >= ?
          GROUP BY DATE(created_at)
          ORDER BY date ASC`,
-        [userId, parseInt(days)]
+        [userId, pastDateStr]
       );
 
       res.json(sales || []);
@@ -122,13 +128,15 @@ const reportController = {
   getHourlySales: async (req, res) => {
     try {
       const userId = req.user.id;
+      const today = new Date().toISOString().split('T')[0];
+      
       const [sales] = await query(
         `SELECT HOUR(created_at) as hour, COUNT(*) as orders, COALESCE(SUM(total_amount), 0) as total 
          FROM orders 
-         WHERE user_id = ? AND status = 'completed' AND DATE(created_at) = DATE('now')
+         WHERE user_id = ? AND status = 'completed' AND DATE(created_at) = ?
          GROUP BY HOUR(created_at)
          ORDER BY hour ASC`,
-        [userId]
+        [userId, today]
       );
 
       // Fill in missing hours
@@ -304,13 +312,19 @@ const reportController = {
       const userId = req.user.id;
       const { days = 30 } = req.query;
       
+      // Calculate the date in JavaScript to be SQLite/MySQL compatible
+      const daysNum = parseInt(days);
+      const pastDate = new Date();
+      pastDate.setDate(pastDate.getDate() - daysNum);
+      const pastDateStr = pastDate.toISOString().split('T')[0];
+      
       const [purchases] = await query(
         `SELECT DATE(created_at) as date, COUNT(*) as count, COALESCE(SUM(total_price), 0) as total 
          FROM purchases 
-         WHERE user_id = ? AND created_at >= DATE_SUB(CURRENT_DATE, INTERVAL ? DAY)
+         WHERE user_id = ? AND DATE(created_at) >= ?
          GROUP BY DATE(created_at)
          ORDER BY date ASC`,
-        [userId, parseInt(days)]
+        [userId, pastDateStr]
       );
 
       res.json(purchases || []);
