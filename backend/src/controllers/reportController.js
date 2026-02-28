@@ -8,7 +8,7 @@ const reportController = {
       const { start_date, end_date } = req.query;
       
       // Build WHERE clause based on filters
-      const conditions = ["user_id = ?", "status = 'completed'"];
+      const conditions = ["user_id = ?"];
       const params = [userId];
 
       if (start_date && end_date) {
@@ -276,8 +276,8 @@ const reportController = {
       const userId = req.user.id;
       const { start_date, end_date } = req.query;
       
-      // Build WHERE clause for sales
-      const salesConditions = ["user_id = ?", "status = 'completed'"];
+      // Build WHERE clause for sales (without status filter to get all orders)
+      const salesConditions = ["user_id = ?"];
       const salesParams = [userId];
 
       // Build WHERE clause for purchases

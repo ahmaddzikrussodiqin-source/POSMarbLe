@@ -629,8 +629,336 @@ const AdminDashboard = () => {
                 </div>
               )}
 
+              {/* Products Tab */}
+              {activeTab === 'products' && (
+                <div>
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-2xl font-bold text-gray-800">Manajemen Produk</h2>
+                    <button onClick={openNewProductModal} className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center gap-2">
+                      <span>+ Tambah Produk</span>
+                    </button>
+                  </div>
+
+                  {/* Products Table */}
+                  <div className="bg-white p-6 rounded-xl shadow">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="text-left py-3 px-4">Nama</th>
+                            <th className="text-left py-3 px-4">Kategori</th>
+                            <th className="text-left py-3 px-4">Harga</th>
+                            <th className="text-left py-3 px-4">Stok</th>
+                            <th className="text-left py-3 px-4">Status</th>
+                            <th className="text-left py-3 px-4">Aksi</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {products.map((product) => (
+                            <tr key={product.id} className="border-b hover:bg-gray-50">
+                              <td className="py-3 px-4 font-medium">{product.name}</td>
+                              <td className="py-3 px-4">{product.category_name || '-'}</td>
+                              <td className="py-3 px-4">{formatCurrency(product.price)}</td>
+                              <td className="py-3 px-4">
+                                {product.has_ingredients ? (
+                                  <span className="text-blue-600">{product.calculated_stock} (otomatis)</span>
+                                ) : (
+                                  <span>{product.stock || 0}</span>
+                                )}
+                              </td>
+                              <td className="py-3 px-4">
+                                <span className={`px-2 py-1 rounded text-xs ${product.is_available ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                  {product.is_available ? 'Aktif' : 'Nonaktif'}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4">
+                                <div className="flex gap-2">
+                                  <button onClick={() => handleEditProduct(product)} className="text-amber-600 hover:text-amber-800 text-sm font-medium">Edit</button>
+                                  <button onClick={() => handleManageProductIngredients(product)} className="text-blue-600 hover:text-blue-800 text-sm font-medium">Bahan</button>
+                                  <button onClick={() => handleDeleteProduct(product.id)} className="text-red-600 hover:text-red-800 text-sm font-medium">Hapus</button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {products.length === 0 && (
+                        <div className="text-center py-8 text-gray-500">
+                          <p>Belum ada produk</p>
+                          <button onClick={openNewProductModal} className="text-amber-600 hover:text-amber-800 mt-2">Tambah produk pertama Anda</button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Categories Tab */}
+              {activeTab === 'categories' && (
+                <div>
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-2xl font-bold text-gray-800">Manajemen Kategori</h2>
+                    <button onClick={() => { setEditingCategory(null); setCategoryForm({ name: '', description: '' }); setShowCategoryModal(true); }} className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center gap-2">
+                      <span>+ Tambah Kategori</span>
+                    </button>
+                  </div>
+
+                  {/* Categories Table */}
+                  <div className="bg-white p-6 rounded-xl shadow">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="text-left py-3 px-4">Nama</th>
+                            <th className="text-left py-3 px-4">Deskripsi</th>
+                            <th className="text-left py-3 px-4">Aksi</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {categories.map((category) => (
+                            <tr key={category.id} className="border-b hover:bg-gray-50">
+                              <td className="py-3 px-4 font-medium">{category.name}</td>
+                              <td className="py-3 px-4 text-gray-600">{category.description || '-'}</td>
+                              <td className="py-3 px-4">
+                                <div className="flex gap-2">
+                                  <button onClick={() => handleEditCategory(category)} className="text-amber-600 hover:text-amber-800 text-sm font-medium">Edit</button>
+                                  <button onClick={() => handleDeleteCategory(category.id)} className="text-red-600 hover:text-red-800 text-sm font-medium">Hapus</button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {categories.length === 0 && (
+                        <div className="text-center py-8 text-gray-500">
+                          <p>Belum ada kategori</p>
+                          <button onClick={() => { setEditingCategory(null); setCategoryForm({ name: '', description: '' }); setShowCategoryModal(true); }} className="text-amber-600 hover:text-amber-800 mt-2">Tambah kategori pertama Anda</button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Orders Tab */}
+              {activeTab === 'orders' && (
+                <div>
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-2xl font-bold text-gray-800">Manajemen Pesanan</h2>
+                  </div>
+
+                  {/* Order Filters */}
+                  <div className="bg-white p-4 rounded-xl shadow mb-6">
+                    <div className="flex flex-wrap gap-4 items-end">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Tanggal Mulai</label>
+                        <input type="date" value={orderFilter.startDate} onChange={(e) => handleOrderFilterChange('startDate', e.target.value)} className="border rounded-lg px-3 py-2" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Tanggal Akhir</label>
+                        <input type="date" value={orderFilter.endDate} onChange={(e) => handleOrderFilterChange('endDate', e.target.value)} className="border rounded-lg px-3 py-2" />
+                      </div>
+                      <button onClick={applyOrderFilter} className="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition">Filter</button>
+                    </div>
+                  </div>
+
+                  {/* Orders Table */}
+                  <div className="bg-white p-6 rounded-xl shadow">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="text-left py-3 px-4">No. Pesanan</th>
+                            <th className="text-left py-3 px-4">Total</th>
+                            <th className="text-left py-3 px-4">Metode</th>
+                            <th className="text-left py-3 px-4">Status</th>
+                            <th className="text-left py-3 px-4">Kasir</th>
+                            <th className="text-left py-3 px-4">Waktu</th>
+                            <th className="text-left py-3 px-4">Aksi</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {orders.map((order) => (
+                            <tr key={order.id} className="border-b hover:bg-gray-50">
+                              <td className="py-3 px-4 font-medium">{order.order_number}</td>
+                              <td className="py-3 px-4">{formatCurrency(order.total_amount)}</td>
+                              <td className="py-3 px-4 capitalize">{order.payment_method || 'cash'}</td>
+                              <td className="py-3 px-4">
+                                <span className={`px-2 py-1 rounded text-xs ${order.status === 'completed' ? 'bg-green-100 text-green-700' : order.status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                  {order.status || 'completed'}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4">{order.created_by_name || '-'}</td>
+                              <td className="py-3 px-4">{formatDateTime(order.created_at)}</td>
+                              <td className="py-3 px-4">
+                                <button onClick={() => handleViewReceipt(order)} className="text-amber-600 hover:text-amber-800 text-sm font-medium">Lihat Nota</button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {orders.length === 0 && (
+                        <div className="text-center py-8 text-gray-500">
+                          <p>Belum ada pesanan</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Ingredients Tab */}
+              {activeTab === 'ingredients' && (
+                <div>
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-2xl font-bold text-gray-800">Manajemen Stock Bahan</h2>
+                    <button onClick={openNewIngredientModal} className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center gap-2">
+                      <span>+ Tambah Bahan</span>
+                    </button>
+                  </div>
+
+                  {/* Ingredients Table */}
+                  <div className="bg-white p-6 rounded-xl shadow">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="text-left py-3 px-4">Nama</th>
+                            <th className="text-left py-3 px-4">Stok</th>
+                            <th className="text-left py-3 px-4">Unit</th>
+                            <th className="text-left py-3 px-4">Aksi</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {ingredients.map((ingredient) => (
+                            <tr key={ingredient.id} className="border-b hover:bg-gray-50">
+                              <td className="py-3 px-4 font-medium">{ingredient.name}</td>
+                              <td className="py-3 px-4">
+                                <span className={ingredient.stock <= 10 ? 'text-red-600 font-medium' : ''}>
+                                  {ingredient.stock}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4">{ingredient.unit}</td>
+                              <td className="py-3 px-4">
+                                <div className="flex gap-2">
+                                  <button onClick={() => handleOpenPurchaseModal(ingredient)} className="text-green-600 hover:text-green-800 text-sm font-medium">Tambah Stok</button>
+                                  <button onClick={() => handleEditIngredient(ingredient)} className="text-amber-600 hover:text-amber-800 text-sm font-medium">Edit</button>
+                                  <button onClick={() => handleDeleteIngredient(ingredient.id)} className="text-red-600 hover:text-red-800 text-sm font-medium">Hapus</button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {ingredients.length === 0 && (
+                        <div className="text-center py-8 text-gray-500">
+                          <p>Belum ada bahan</p>
+                          <button onClick={openNewIngredientModal} className="text-amber-600 hover:text-amber-800 mt-2">Tambah bahan pertama Anda</button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Nota Tab */}
+              {activeTab === 'nota' && (
+                <div>
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-2xl font-bold text-gray-800">Pengaturan Nota</h2>
+                  </div>
+
+                  {loadingNota ? (
+                    <div className="text-center py-8">Loading...</div>
+                  ) : (
+                    <div className="bg-white p-6 rounded-xl shadow">
+                      <form onSubmit={handleSaveNota}>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Nama Toko</label>
+                            <input type="text" value={notaSettings.shop_name} onChange={(e) => handleNotaChange('shop_name', e.target.value)} className="w-full border rounded-lg px-3 py-2" required />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Nomor Telepon</label>
+                            <input type="text" value={notaSettings.phone} onChange={(e) => handleNotaChange('phone', e.target.value)} className="w-full border rounded-lg px-3 py-2" />
+                          </div>
+                          <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Alamat</label>
+                            <textarea value={notaSettings.address} onChange={(e) => handleNotaChange('address', e.target.value)} className="w-full border rounded-lg px-3 py-2" rows="2"></textarea>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Pajak (%)</label>
+                            <input type="number" step="0.01" value={notaSettings.tax_rate} onChange={(e) => handleNotaChange('tax_rate', parseFloat(e.target.value) || 0)} className="w-full border rounded-lg px-3 py-2" />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Mata Uang</label>
+                            <select value={notaSettings.currency} onChange={(e) => handleNotaChange('currency', e.target.value)} className="w-full border rounded-lg px-3 py-2">
+                              <option value="IDR">IDR (Rupiah)</option>
+                              <option value="USD">USD (Dollar)</option>
+                              <option value="EUR">EUR (Euro)</option>
+                            </select>
+                          </div>
+                          <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Footer Text</label>
+                            <textarea value={notaSettings.footer_text} onChange={(e) => handleNotaChange('footer_text', e.target.value)} className="w-full border rounded-lg px-3 py-2" rows="2"></textarea>
+                          </div>
+                          <div className="flex items-center gap-6">
+                            <label className="flex items-center gap-2">
+                              <input type="checkbox" checked={notaSettings.show_logo} onChange={(e) => handleNotaChange('show_logo', e.target.checked)} className="rounded" />
+                              <span className="text-sm font-medium text-gray-700">Tampilkan Logo</span>
+                            </label>
+                            <label className="flex items-center gap-2">
+                              <input type="checkbox" checked={notaSettings.show_qr_code} onChange={(e) => handleNotaChange('show_qr_code', e.target.checked)} className="rounded" />
+                              <span className="text-sm font-medium text-gray-700">Tampilkan QR Code</span>
+                            </label>
+                          </div>
+                        </div>
+                        <button type="submit" disabled={savingNota} className="bg-amber-600 text-white px-6 py-2 rounded-lg hover:bg-amber-700 transition disabled:bg-gray-400">
+                          {savingNota ? 'Menyimpan...' : 'Simpan Pengaturan'}
+                        </button>
+                      </form>
+
+                      {/* Preview Nota */}
+                      <div className="mt-8 pt-6 border-t">
+                        <h3 className="text-lg font-bold text-gray-800 mb-4">Preview Nota</h3>
+                        <div className="bg-gray-50 p-4 rounded-lg max-w-md mx-auto">
+                          <div className="text-center border-b pb-4 mb-4">
+                            {notaSettings.show_logo && <div className="text-2xl mb-2">🏪</div>}
+                            <h4 className="font-bold text-lg">{notaSettings.shop_name}</h4>
+                            <p className="text-sm text-gray-600">{notaSettings.address}</p>
+                            <p className="text-sm text-gray-600">{notaSettings.phone}</p>
+                          </div>
+                          <div className="text-sm">
+                            <div className="flex justify-between py-1">
+                              <span>1x Produk Contoh</span>
+                              <span>Rp 10.000</span>
+                            </div>
+                          </div>
+                          <div className="border-t pt-2 mt-2">
+                            <div className="flex justify-between font-bold">
+                              <span>Total</span>
+                              <span>Rp 10.000</span>
+                            </div>
+                          </div>
+                          {notaSettings.show_qr_code && (
+                            <div className="text-center mt-4">
+                              <div className="bg-white p-2 inline-block rounded">
+                                <div className="w-20 h-20 bg-gray-200 flex items-center justify-center text-xs">QR Code</div>
+                              </div>
+                            </div>
+                          )}
+                          <div className="text-center mt-4 text-sm text-gray-600">
+                            {notaSettings.footer_text}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Other tabs placeholder */}
-              {activeTab !== 'dashboard' && activeTab !== 'purchasing' && (
+              {activeTab !== 'dashboard' && activeTab !== 'purchasing' && activeTab !== 'products' && activeTab !== 'categories' && activeTab !== 'orders' && activeTab !== 'ingredients' && activeTab !== 'nota' && (
                 <div className="bg-white p-6 rounded-xl shadow">
                   <h2 className="text-2xl font-bold text-gray-800 mb-4">{tabs.find(t => t.id === activeTab)?.label}</h2>
                   <p className="text-gray-600">Fitur ini sedang dalam pengembangan.</p>
@@ -759,6 +1087,159 @@ const AdminDashboard = () => {
               </div>
             </div>
           )}
+
+          {/* Category Modal */}
+          {showCategoryModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white p-6 rounded-xl shadow-lg max-w-md w-full">
+                <h3 className="text-lg font-bold text-gray-800 mb-4">
+                  {editingCategory ? 'Edit Kategori' : 'Tambah Kategori'}
+                </h3>
+                <form onSubmit={handleSaveCategory}>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Nama Kategori</label>
+                    <input type="text" value={categoryForm.name} onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })} className="w-full border rounded-lg px-3 py-2" placeholder="Nama kategori" required />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
+                    <textarea value={categoryForm.description} onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })} className="w-full border rounded-lg px-3 py-2" rows="2" placeholder="Deskripsi (opsional)"></textarea>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <button type="button" onClick={() => { setShowCategoryModal(false); setEditingCategory(null); setCategoryForm({ name: '', description: '' }); }} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Batal</button>
+                    <button type="submit" className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700">Simpan</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Product Modal */}
+          {showProductModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white p-6 rounded-xl shadow-lg max-w-2xl w-full max-h-[90vh] overflow-auto">
+                <h3 className="text-lg font-bold text-gray-800 mb-4">
+                  {editingProduct ? 'Edit Produk' : 'Tambah Produk'}
+                </h3>
+                <form onSubmit={handleSaveProduct}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Nama Produk</label>
+                      <input type="text" value={productForm.name} onChange={(e) => setProductForm({ ...productForm, name: e.target.value })} className="w-full border rounded-lg px-3 py-2" placeholder="Nama produk" required />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
+                      <select value={productForm.category_id} onChange={(e) => setProductForm({ ...productForm, category_id: e.target.value })} className="w-full border rounded-lg px-3 py-2">
+                        <option value="">Pilih Kategori</option>
+                        {categories.map((cat) => (<option key={cat.id} value={cat.id}>{cat.name}</option>))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Harga</label>
+                      <input type="number" step="0.01" value={productForm.price} onChange={(e) => setProductForm({ ...productForm, price: e.target.value })} className="w-full border rounded-lg px-3 py-2" placeholder="Harga" required />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Stok (manual)</label>
+                      <input type="number" value={productForm.stock} onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })} className="w-full border rounded-lg px-3 py-2" placeholder="Stok" />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
+                      <textarea value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} className="w-full border rounded-lg px-3 py-2" rows="2" placeholder="Deskripsi (opsional)"></textarea>
+                    </div>
+                  </div>
+                  
+                  {/* Product Ingredients Section */}
+                  <div className="mb-4 border-t pt-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="block text-sm font-medium text-gray-700">Bahan Baku (Opsional)</label>
+                      <button type="button" onClick={addIngredientToForm} className="text-amber-600 hover:text-amber-800 text-sm">+ Tambah Bahan</button>
+                    </div>
+                    {productForm.ingredients.map((ing, index) => (
+                      <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
+                        <select value={ing.ingredient_id} onChange={(e) => updateIngredientInForm(index, 'ingredient_id', e.target.value)} className="border rounded-lg px-3 py-2">
+                          <option value="">Pilih Bahan</option>
+                          {ingredients.map((i) => (<option key={i.id} value={i.id}>{i.name} ({i.unit})</option>))}
+                        </select>
+                        <input type="number" step="0.01" value={ing.quantity_required} onChange={(e) => updateIngredientInForm(index, 'quantity_required', e.target.value)} className="border rounded-lg px-3 py-2" placeholder="Jumlah diperlukan" />
+                        <button type="button" onClick={() => removeIngredientFromForm(index)} className="text-red-600 hover:text-red-800 text-sm">Hapus</button>
+                      </div>
+                    ))}
+                    <p className="text-xs text-gray-500 mt-1">Jika diisi, stok produk akan dihitung otomatis dari bahan baku</p>
+                  </div>
+                  
+                  <div className="flex justify-end gap-2">
+                    <button type="button" onClick={() => { setShowProductModal(false); setEditingProduct(null); setProductForm({ name: '', description: '', price: '', category_id: '', stock: '', ingredients: [] }); }} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Batal</button>
+                    <button type="submit" className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700">Simpan</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Ingredient Modal */}
+          {showIngredientModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white p-6 rounded-xl shadow-lg max-w-md w-full">
+                <h3 className="text-lg font-bold text-gray-800 mb-4">
+                  {editingIngredient ? 'Edit Bahan' : 'Tambah Bahan'}
+                </h3>
+                <form onSubmit={handleSaveIngredient}>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Nama Bahan</label>
+                    <input type="text" value={ingredientForm.name} onChange={(e) => setIngredientForm({ ...ingredientForm, name: e.target.value })} className="w-full border rounded-lg px-3 py-2" placeholder="Nama bahan" required />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
+                    <select value={ingredientForm.unit} onChange={(e) => setIngredientForm({ ...ingredientForm, unit: e.target.value })} className="w-full border rounded-lg px-3 py-2">
+                      <option value="gram">Gram</option>
+                      <option value="kg">Kilogram</option>
+                      <option value="ml">Mililiter</option>
+                      <option value="liter">Liter</option>
+                      <option value="pcs">Pcs</option>
+                      <option value="pack">Pack</option>
+                      <option value="box">Box</option>
+                    </select>
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Stok Awal</label>
+                    <input type="number" step="0.01" value={ingredientForm.stock} onChange={(e) => setIngredientForm({ ...ingredientForm, stock: e.target.value })} className="w-full border rounded-lg px-3 py-2" placeholder="Stok awal" />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <button type="button" onClick={() => { setShowIngredientModal(false); setEditingIngredient(null); setIngredientForm({ name: '', unit: 'gram', stock: '' }); }} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Batal</button>
+                    <button type="submit" className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700">Simpan</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Product Ingredients Modal */}
+          {showProductIngredientModal && selectedProduct && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white p-6 rounded-xl shadow-lg max-w-2xl w-full max-h-[90vh] overflow-auto">
+                <h3 className="text-lg font-bold text-gray-800 mb-4">
+                  Kelola Bahan: {selectedProduct.name}
+                </h3>
+                <div className="mb-4">
+                  <button type="button" onClick={addProductIngredient} className="text-amber-600 hover:text-amber-800 text-sm">+ Tambah Bahan</button>
+                </div>
+                {productIngredientForm.map((pi, index) => (
+                  <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
+                    <select value={pi.ingredient_id} onChange={(e) => updateProductIngredient(index, 'ingredient_id', e.target.value)} className="border rounded-lg px-3 py-2">
+                      <option value="">Pilih Bahan</option>
+                      {ingredients.map((ing) => (<option key={ing.id} value={ing.id}>{ing.name} ({ing.unit})</option>))}
+                    </select>
+                    <input type="number" step="0.01" value={pi.quantity_required} onChange={(e) => updateProductIngredient(index, 'quantity_required', e.target.value)} className="border rounded-lg px-3 py-2" placeholder="Jumlah diperlukan" />
+                    <button type="button" onClick={() => removeProductIngredient(index)} className="text-red-600 hover:text-red-800 text-sm">Hapus</button>
+                  </div>
+                ))}
+                <div className="flex justify-end gap-2 mt-4">
+                  <button type="button" onClick={() => { setShowProductIngredientModal(false); setSelectedProduct(null); setProductIngredientForm([]); }} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Batal</button>
+                  <button type="button" onClick={handleSaveProductIngredients} className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700">Simpan</button>
+                </div>
+              </div>
+            </div>
+          )}
+
         </main>
       </div>
     </div>
