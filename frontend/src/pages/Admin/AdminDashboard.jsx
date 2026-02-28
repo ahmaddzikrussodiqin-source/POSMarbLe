@@ -1313,7 +1313,7 @@ const openNewProductModal = () => { setEditingProduct(null); setProductForm({ na
                   </div>
                   
                   <div className="flex justify-end gap-2">
-                    <button type="button" onClick={() => { setShowProductModal(false); setEditingProduct(null); setProductForm({ name: '', description: '', price: '', category_id: '', stock: '', ingredients: [] }); }} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Batal</button>
+                    <button type="button" onClick={() => { setShowProductModal(false); setEditingProduct(null); setProductForm({ name: '', description: '', price: '', category_id: '', stock: '', ingredients: [], image_url: '' }); }} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Batal</button>
                     <button type="submit" className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700">Simpan</button>
                   </div>
                 </form>
