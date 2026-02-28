@@ -375,6 +375,22 @@ const initDatabase = async () => {
         console.log('Migration check/error for purchases:', migrationError.message);
       }
 
+      // Migration: Add user_id column to nota_settings table if it doesn't exist (SQLite)
+      try {
+        const tableInfo = db.exec("PRAGMA table_info(nota_settings)");
+        const hasUserId = tableInfo[0]?.values.some(col => col[1] === 'user_id');
+        if (!hasUserId) {
+          console.log('Migrating: Adding user_id column to nota_settings table...');
+          db.run('ALTER TABLE nota_settings ADD COLUMN user_id INTEGER DEFAULT 1');
+          db.run('UPDATE nota_settings SET user_id = 1 WHERE user_id IS NULL');
+          console.log('Migration complete: user_id column added to nota_settings');
+        } else {
+          console.log('Migration: nota_settings table already has user_id column');
+        }
+      } catch (migrationError) {
+        console.log('Migration check/error for nota_settings:', migrationError.message);
+      }
+
       // Create default admin user if not exists
       try {
         const stmt = db.prepare('SELECT * FROM users WHERE username = ?');
@@ -640,6 +656,25 @@ const initDatabase = async () => {
         }
       } catch (migrationError) {
         console.log('Migration check/error for MySQL purchases:', migrationError.message);
+      }
+
+      // Migration: Add user_id column to nota_settings table if it doesn't exist (MySQL)
+      try {
+        const [columns] = await connection.query(`
+          SELECT COLUMN_NAME 
+          FROM INFORMATION_SCHEMA.COLUMNS 
+          WHERE TABLE_NAME = 'nota_settings' AND COLUMN_NAME = 'user_id'
+        `);
+        if (columns.length === 0) {
+          console.log('Migrating MySQL: Adding user_id column to nota_settings table...');
+          await connection.query('ALTER TABLE nota_settings ADD COLUMN user_id INT DEFAULT 1');
+          await connection.query('UPDATE nota_settings SET user_id = 1 WHERE user_id IS NULL');
+          console.log('Migration complete: user_id column added to nota_settings (MySQL)');
+        } else {
+          console.log('Migration: MySQL nota_settings table already has user_id column');
+        }
+      } catch (migrationError) {
+        console.log('Migration check/error for MySQL nota_settings:', migrationError.message);
       }
 
       console.log('MySQL database tables initialized successfully');
