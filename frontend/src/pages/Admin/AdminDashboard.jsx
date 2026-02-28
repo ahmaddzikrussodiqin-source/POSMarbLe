@@ -375,13 +375,13 @@ const AdminDashboard = () => {
                   </div>
 
                   {/* Charts Grid - Using grid layout for better organization */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 min-w-0">
                     {/* Daily Sales Trend - Full width on mobile, half on large screens */}
-                    <div className="bg-white p-4 rounded-xl shadow overflow-hidden lg:col-span-2">
+                    <div className="bg-white p-4 rounded-xl shadow overflow-hidden lg:col-span-2 min-w-0">
                       <h3 className="text-lg font-bold text-gray-800 mb-2">Trend Penjualan Bulan {formatMonthYear(selectedMonth, selectedYear)}</h3>
-                      <div style={{ height: '300px', minHeight: '300px', overflow: 'hidden' }}>
+                      <div className="min-h-0" style={{ height: '300px', minHeight: '300px' }}>
                         {!loading && chartsReady && dailySales.length > 0 ? (
-                          <ResponsiveContainer width="100%" height={300}>
+                          <ResponsiveContainer width="100%" height={300} minWidth={0}>
                             <AreaChart data={dailySales.map(item => ({ ...item, date: formatShortDate(item.date) }))} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                               <defs><linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#0088FE" stopOpacity={0.8}/><stop offset="95%" stopColor="#0088FE" stopOpacity={0}/></linearGradient></defs>
                               <CartesianGrid strokeDasharray="3 3" stroke="#eee" /><XAxis dataKey="date" tick={{ fontSize: 9 }} interval={Math.floor(dailySales.length / 10)} /><YAxis tick={{ fontSize: 10 }} />
@@ -396,11 +396,11 @@ const AdminDashboard = () => {
                     </div>
 
                     {/* Hourly Sales Today */}
-                    <div className="bg-white p-4 rounded-xl shadow overflow-hidden">
+                    <div className="bg-white p-4 rounded-xl shadow overflow-hidden min-w-0">
                       <h3 className="text-lg font-bold text-gray-800 mb-2">Penjualan per Jam (Hari Ini)</h3>
-                      <div style={{ height: '250px', minHeight: '250px', overflow: 'hidden' }}>
+                      <div className="min-h-0" style={{ height: '250px', minHeight: '250px' }}>
                         {!loading && chartsReady && hourlySales.length > 0 ? (
-                          <ResponsiveContainer width="100%" height={250}>
+                          <ResponsiveContainer width="100%" height={250} minWidth={0}>
                             <BarChart data={hourlySales} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" stroke="#eee" /><XAxis dataKey="hour" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} /><Tooltip formatter={(value) => formatCurrency(value)} contentStyle={{ fontSize: '12px' }} /><Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} /><Bar dataKey="total" fill="#00C49F" name="Penjualan" /></BarChart>
                           </ResponsiveContainer>
                         ) : (
@@ -410,11 +410,11 @@ const AdminDashboard = () => {
                     </div>
 
                     {/* Best Selling Products */}
-                    <div className="bg-white p-4 rounded-xl shadow overflow-hidden">
+                    <div className="bg-white p-4 rounded-xl shadow overflow-hidden min-w-0">
                       <h3 className="text-lg font-bold text-gray-800 mb-2">Produk Terlaris</h3>
-                      <div style={{ height: '250px', minHeight: '250px', overflow: 'hidden' }}>
+                      <div className="min-h-0" style={{ height: '250px', minHeight: '250px' }}>
                         {!loading && chartsReady && bestSellingProducts.length > 0 ? (
-                          <ResponsiveContainer width="100%" height={250}>
+                          <ResponsiveContainer width="100%" height={250} minWidth={0}>
                             <BarChart data={bestSellingProducts} layout="vertical" margin={{ top: 5, right: 10, left: 5, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" stroke="#eee" /><XAxis type="number" tick={{ fontSize: 10 }} /><YAxis dataKey="product_name" type="category" width={80} tick={{ fontSize: 10 }} /><Tooltip formatter={(value, name) => [value, name === 'total_quantity' ? 'Jumlah' : 'Total']} contentStyle={{ fontSize: '12px' }} /><Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} /><Bar dataKey="total_quantity" fill="#FFBB28" name="Terjual" /></BarChart>
                           </ResponsiveContainer>
                         ) : (
@@ -424,11 +424,11 @@ const AdminDashboard = () => {
                     </div>
 
                     {/* Payment Methods */}
-                    <div className="bg-white p-4 rounded-xl shadow overflow-hidden">
+                    <div className="bg-white p-4 rounded-xl shadow overflow-hidden min-w-0">
                       <h3 className="text-lg font-bold text-gray-800 mb-2">Metode Pembayaran</h3>
-                      <div style={{ height: '250px', minHeight: '250px', overflow: 'hidden' }}>
+                      <div className="min-h-0" style={{ height: '250px', minHeight: '250px' }}>
                         {!loading && chartsReady && paymentData.length > 0 ? (
-                          <ResponsiveContainer width="100%" height={250}>
+                          <ResponsiveContainer width="100%" height={250} minWidth={0}>
                             <PieChart>
                               <Pie data={paymentData} cx="50%" cy="50%" labelLine={false} label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`} outerRadius={60} fill="#8884d8" dataKey="value">
                                 {paymentData.map((entry, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />))}
@@ -443,11 +443,11 @@ const AdminDashboard = () => {
                     </div>
 
                     {/* Daily Purchases Trend */}
-                    <div className="bg-white p-4 rounded-xl shadow overflow-hidden">
+                    <div className="bg-white p-4 rounded-xl shadow overflow-hidden min-w-0">
                       <h3 className="text-lg font-bold text-gray-800 mb-2">Trend Pembelian Bulan {formatMonthYear(selectedMonth, selectedYear)}</h3>
-                      <div style={{ height: '300px', minHeight: '300px', overflow: 'hidden' }}>
+                      <div className="min-h-0" style={{ height: '300px', minHeight: '300px' }}>
                         {!loading && chartsReady && dailyPurchases.length > 0 ? (
-                          <ResponsiveContainer width="100%" height={300}>
+                          <ResponsiveContainer width="100%" height={300} minWidth={0}>
                             <AreaChart data={dailyPurchases.map(item => ({ ...item, date: formatShortDate(item.date) }))} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                               <defs><linearGradient id="colorPurchases" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#FF8042" stopOpacity={0.8}/><stop offset="95%" stopColor="#FF8042" stopOpacity={0}/></linearGradient></defs>
                               <CartesianGrid strokeDasharray="3 3" stroke="#eee" /><XAxis dataKey="date" tick={{ fontSize: 9 }} interval={Math.floor(dailyPurchases.length / 10)} />
@@ -463,11 +463,11 @@ const AdminDashboard = () => {
                     </div>
 
                     {/* Top Cashiers */}
-                    <div className="bg-white p-4 rounded-xl shadow overflow-hidden">
+                    <div className="bg-white p-4 rounded-xl shadow overflow-hidden min-w-0">
                       <h3 className="text-lg font-bold text-gray-800 mb-2">Kasir Terbaik</h3>
-                      <div style={{ height: '250px', minHeight: '250px', overflow: 'hidden' }}>
+                      <div className="min-h-0" style={{ height: '250px', minHeight: '250px' }}>
                         {!loading && chartsReady && topCashiers.length > 0 ? (
-                          <ResponsiveContainer width="100%" height={250}>
+                          <ResponsiveContainer width="100%" height={250} minWidth={0}>
                             <BarChart data={topCashiers} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" stroke="#eee" /><XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} /><Tooltip formatter={(value, name) => [name === 'total_sales' ? formatCurrency(value) : value, name === 'total_sales' ? 'Penjualan' : 'Pesanan']} contentStyle={{ fontSize: '12px' }} /><Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} /><Bar dataKey="total_sales" fill="#8884D8" name="Penjualan" /><Bar dataKey="total_orders" fill="#82CA9D" name="Pesanan" /></BarChart>
                           </ResponsiveContainer>
                         ) : (
