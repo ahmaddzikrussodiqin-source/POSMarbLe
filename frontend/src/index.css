@@ -15,3 +15,10 @@ body {
   min-height: 100vh;
 }
 
+/* Print styles - hide buttons when printing */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
+
