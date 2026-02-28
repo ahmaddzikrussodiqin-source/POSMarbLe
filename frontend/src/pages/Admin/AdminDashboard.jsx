@@ -37,10 +37,10 @@ const AdminDashboard = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [productIngredients, setProductIngredients] = useState([]);
   
-  // Form data
+// Form data
   const [categoryForm, setCategoryForm] = useState({ name: '', description: '' });
   const [productForm, setProductForm] = useState({
-    name: '', description: '', price: '', category_id: '', stock: '', ingredients: [],
+    name: '', description: '', price: '', category_id: '', stock: '', ingredients: [], image_url: '',
   });
   const [ingredientForm, setIngredientForm] = useState({ name: '', unit: 'gram', stock: '' });
   const [productIngredientForm, setProductIngredientForm] = useState([]);
@@ -186,24 +186,24 @@ const AdminDashboard = () => {
     }
   };
 
-  // Product handlers
+// Product handlers
   const handleSaveProduct = async (e) => {
     e.preventDefault();
     try {
       const validIngredients = productForm.ingredients.filter(ing => ing.ingredient_id && ing.quantity_required);
-      const data = { ...productForm, price: parseFloat(productForm.price), category_id: productForm.category_id ? parseInt(productForm.category_id) : null, stock: parseInt(productForm.stock) || 0, ingredients: validIngredients };
+      const data = { ...productForm, price: parseFloat(productForm.price), category_id: productForm.category_id ? parseInt(productForm.category_id) : null, stock: parseInt(productForm.stock) || 0, ingredients: validIngredients, image_url: productForm.image_url || null };
       if (editingProduct) await productsAPI.update(editingProduct.id, data);
       else await productsAPI.create(data);
-      setShowProductModal(false); setEditingProduct(null); setProductForm({ name: '', description: '', price: '', category_id: '', stock: '', ingredients: [] }); loadData();
+      setShowProductModal(false); setEditingProduct(null); setProductForm({ name: '', description: '', price: '', category_id: '', stock: '', ingredients: [], image_url: '' }); loadData();
     } catch (error) { alert(error.response?.data?.error || 'Failed to save product'); }
   };
-  const handleEditProduct = (product) => {
+const handleEditProduct = (product) => {
     setEditingProduct(product);
-    setProductForm({ name: product.name, description: product.description || '', price: product.price.toString(), category_id: product.category_id?.toString() || '', stock: product.stock?.toString() || '0', ingredients: product.ingredients ? product.ingredients.map(ing => ({ ingredient_id: ing.ingredient_id, quantity_required: ing.quantity_required })) : [] });
+    setProductForm({ name: product.name, description: product.description || '', price: product.price.toString(), category_id: product.category_id?.toString() || '', stock: product.stock?.toString() || '0', ingredients: product.ingredients ? product.ingredients.map(ing => ({ ingredient_id: ing.ingredient_id, quantity_required: ing.quantity_required })) : [], image_url: product.image_url || '' });
     setShowProductModal(true);
   };
   const handleDeleteProduct = async (id) => { if (confirm('Apakah Anda yakin ingin menghapus produk ini?')) { try { await productsAPI.delete(id); loadData(); } catch (error) { alert(error.response?.data?.error || 'Failed to delete product'); } } };
-  const openNewProductModal = () => { setEditingProduct(null); setProductForm({ name: '', description: '', price: '', category_id: '', stock: '', ingredients: [] }); setShowProductModal(true); };
+const openNewProductModal = () => { setEditingProduct(null); setProductForm({ name: '', description: '', price: '', category_id: '', stock: '', ingredients: [], image_url: '' }); setShowProductModal(true); };
   const addIngredientToForm = () => { setProductForm({ ...productForm, ingredients: [...productForm.ingredients, { ingredient_id: '', quantity_required: '' }] }); };
   const removeIngredientFromForm = (index) => { const updated = productForm.ingredients.filter((_, i) => i !== index); setProductForm({ ...productForm, ingredients: updated }); };
   const updateIngredientInForm = (index, field, value) => { const updated = [...productForm.ingredients]; updated[index][field] = value; setProductForm({ ...productForm, ingredients: updated }); };
@@ -319,9 +319,35 @@ const AdminDashboard = () => {
     }
   };
   
-  // Remove logo
+// Remove logo
   const handleRemoveLogo = () => {
     setNotaSettings({ ...notaSettings, logo: null });
+  };
+
+  // Handle product image upload and convert to base64
+  const handleProductImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Check file size (max 500KB)
+      if (file.size > 500 * 1024) {
+        alert('Ukuran file terlalu besar. Maksimal 500KB.');
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProductForm({ ...productForm, image_url: reader.result });
+      };
+      reader.onerror = () => {
+        alert('Gagal membaca file.');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+  
+  // Remove product image
+  const handleRemoveProductImage = () => {
+    setProductForm({ ...productForm, image_url: '' });
   };
 
   // Chart colors
@@ -1227,7 +1253,43 @@ const AdminDashboard = () => {
                     </div>
                     <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
-                      <textarea value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} className="w-full border rounded-lg px-3 py-2" rows="2" placeholder="Deskripsi (opsional)"></textarea>
+<textarea value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} className="w-full border rounded-lg px-3 py-2" rows="2" placeholder="Deskripsi (opsional)"></textarea>
+                    </div>
+                    {/* Product Image Upload */}
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Foto Produk</label>
+                      <div className="flex items-center gap-4">
+                        <input 
+                          type="file" 
+                          accept="image/*"
+                          onChange={handleProductImageUpload}
+                          className="block w-full text-sm text-gray-500
+                            file:mr-4 file:py-2 file:px-4
+                            file:rounded-full file:border-0
+                            file:text-sm file:font-semibold
+                            file:bg-amber-50 file:text-amber-700
+                            hover:file:bg-amber-100"
+                        />
+                        {productForm.image_url && (
+                          <button 
+                            type="button"
+                            onClick={handleRemoveProductImage}
+                            className="text-red-600 hover:text-red-800 text-sm"
+                          >
+                            Hapus
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">Ukuran maksimal: 500KB (JPG, PNG, GIF)</p>
+                      {productForm.image_url && (
+                        <div className="mt-2">
+                          <img 
+                            src={productForm.image_url} 
+                            alt="Product Preview" 
+                            className="h-24 w-auto object-contain border rounded-lg p-1"
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                   
