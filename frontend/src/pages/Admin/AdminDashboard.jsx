@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { categoriesAPI, productsAPI, ordersAPI, reportsAPI, ingredientsAPI, purchasesAPI, notaAPI } from '../../services/api';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area
@@ -10,6 +10,7 @@ import {
 const AdminDashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
@@ -89,6 +90,14 @@ const AdminDashboard = () => {
     }, 100);
     return () => clearTimeout(timer);
   }, []);
+
+  // Handle tab query parameter from navigation
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && ['dashboard', 'purchasing', 'products', 'nota', 'ingredients', 'categories', 'orders'].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
 
   useEffect(() => { loadData(); }, [activeTab, selectedMonth, selectedYear]);
 

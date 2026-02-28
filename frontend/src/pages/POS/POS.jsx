@@ -654,6 +654,17 @@ const POS = () => {
             </div>
 
             <div className="p-4 bg-gray-50 flex gap-3">
+              {isAdmin && (
+                <button
+                  onClick={() => { setShowReceipt(null); navigate('/admin?tab=nota'); }}
+                  className="flex-1 py-3 bg-white border-2 border-blue-500 text-blue-600 rounded-xl font-bold hover:bg-blue-50 transition flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Edit Nota
+                </button>
+              )}
               <button
                 onClick={handlePrint}
                 className="flex-1 py-3 bg-white border-2 border-amber-500 text-amber-600 rounded-xl font-bold hover:bg-amber-50 transition flex items-center justify-center gap-2"
