@@ -80,8 +80,17 @@ const reportController = {
         const daysNum = parseInt(days);
         const pastDate = new Date();
         pastDate.setDate(pastDate.getDate() - daysNum);
-        const pastDateStr = pastDate.toISOString().split('T')[0];
-        const todayStr = new Date().toISOString().split('T')[0];
+        
+        // Format date in local timezone (not UTC)
+        const formatLocalDate = (date) => {
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        };
+        
+        const pastDateStr = formatLocalDate(pastDate);
+        const todayStr = formatLocalDate(new Date());
         dateCondition = "DATE(created_at) BETWEEN ? AND ?";
         params = [userId, pastDateStr, todayStr];
       }
@@ -140,7 +149,13 @@ const reportController = {
   getHourlySales: async (req, res) => {
     try {
       const userId = req.user.id;
-      const today = new Date().toISOString().split('T')[0];
+      
+      // Format date in local timezone (not UTC) to match frontend
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      const todayStr = `${year}-${month}-${day}`;
       
       // Use strftime for SQLite compatibility, HOUR for MySQL
       const hourFunction = useSQLite ? "strftime('%H', created_at)" : "HOUR(created_at)";
@@ -151,7 +166,7 @@ const reportController = {
          WHERE user_id = ? AND status = 'completed' AND DATE(created_at) = ?
          GROUP BY ${hourFunction}
          ORDER BY hour ASC`,
-        [userId, today]
+        [userId, todayStr]
       );
 
       // Fill in missing hours
@@ -339,8 +354,17 @@ const reportController = {
         const daysNum = parseInt(days);
         const pastDate = new Date();
         pastDate.setDate(pastDate.getDate() - daysNum);
-        const pastDateStr = pastDate.toISOString().split('T')[0];
-        const todayStr = new Date().toISOString().split('T')[0];
+        
+        // Format date in local timezone (not UTC)
+        const formatLocalDate = (date) => {
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        };
+        
+        const pastDateStr = formatLocalDate(pastDate);
+        const todayStr = formatLocalDate(new Date());
         dateCondition = "DATE(created_at) BETWEEN ? AND ?";
         params = [userId, pastDateStr, todayStr];
       }

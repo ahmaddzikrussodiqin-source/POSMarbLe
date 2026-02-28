@@ -232,7 +232,13 @@ const orderController = {
   getTodayOrders: async (req, res) => {
     try {
       const userId = req.user.id;
-      const today = new Date().toISOString().split('T')[0];
+      
+      // Format date in local timezone (not UTC) to match frontend
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      const todayStr = `${year}-${month}-${day}`;
       
       const [orders] = await query(
         `SELECT o.*, u.name as created_by_name 
@@ -240,7 +246,7 @@ const orderController = {
          LEFT JOIN users u ON o.created_by = u.id 
          WHERE DATE(o.created_at) = ? AND o.user_id = ? AND o.status = 'completed'
          ORDER BY o.created_at DESC`,
-        [today, userId]
+        [todayStr, userId]
       );
 
       // Get items for each order

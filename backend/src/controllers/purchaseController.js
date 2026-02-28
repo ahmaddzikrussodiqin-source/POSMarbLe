@@ -228,7 +228,13 @@ const purchaseController = {
   getTodayPurchases: async (req, res) => {
     try {
       const userId = req.user.id;
-      const today = new Date().toISOString().split('T')[0];
+      
+      // Format date in local timezone (not UTC) to match frontend
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      const todayStr = `${year}-${month}-${day}`;
       
       const [purchases] = await query(
         `SELECT p.*, u.name as created_by_name 
@@ -236,7 +242,7 @@ const purchaseController = {
          LEFT JOIN users u ON p.created_by = u.id 
          WHERE DATE(p.created_at) = ? AND p.user_id = ?
          ORDER BY p.created_at DESC`,
-        [today, userId]
+        [todayStr, userId]
       );
 
       res.json(purchases || []);
