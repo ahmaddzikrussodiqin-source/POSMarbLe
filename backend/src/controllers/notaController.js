@@ -15,8 +15,12 @@ const defaultNota = {
 // Ensure nota settings record exists for a user
 const ensureNotaExists = async (userId) => {
   try {
+    console.log('[Nota] Ensuring nota exists for user:', userId);
     const [rows] = await query('SELECT * FROM nota_settings WHERE user_id = ?', [userId]);
+    console.log('[Nota] Query result:', rows);
+    
     if (!rows || rows.length === 0) {
+      console.log('[Nota] Creating new nota settings for user:', userId);
       // Create default record for user
       await query(
         `INSERT INTO nota_settings (user_id, shop_name, address, phone, footer_text, show_logo, show_qr_code, tax_rate, currency) 
@@ -34,41 +38,50 @@ const ensureNotaExists = async (userId) => {
         ]
       );
       if (useSQLite) saveDatabase();
+      console.log('[Nota] Created nota settings for user:', userId);
+    } else {
+      console.log('[Nota] Nota settings already exists for user:', userId);
     }
   } catch (error) {
-    console.error('Error ensuring nota exists:', error);
+    console.error('[Nota] Error ensuring nota exists:', error);
+    throw error; // Re-throw to let caller handle it
   }
 };
 
 // Read nota settings from database for a user
 const getNotaData = async (userId) => {
   try {
+    // Ensure the record exists first
     await ensureNotaExists(userId);
+    
     const [rows] = await query('SELECT * FROM nota_settings WHERE user_id = ?', [userId]);
     if (rows && rows.length > 0) {
       const row = rows[0];
       return {
-        shop_name: row.shop_name,
+        shop_name: row.shop_name || defaultNota.shop_name,
         address: row.address || '',
         phone: row.phone || '',
-        footer_text: row.footer_text,
-        show_logo: Boolean(row.show_logo),
-        show_qr_code: Boolean(row.show_qr_code),
-        tax_rate: row.tax_rate,
-        currency: row.currency
+        footer_text: row.footer_text || defaultNota.footer_text,
+        show_logo: row.show_logo !== undefined ? Boolean(row.show_logo) : defaultNota.show_logo,
+        show_qr_code: row.show_qr_code !== undefined ? Boolean(row.show_qr_code) : defaultNota.show_qr_code,
+        tax_rate: row.tax_rate !== undefined ? parseFloat(row.tax_rate) : defaultNota.tax_rate,
+        currency: row.currency || defaultNota.currency
       };
     }
   } catch (error) {
     console.error('Error reading nota from database:', error);
   }
-  return defaultNota;
+  return { ...defaultNota };
 };
 
 // Update nota settings in database for a user
 const saveNotaData = async (userId, data) => {
   try {
+    // First ensure the record exists
     await ensureNotaExists(userId);
-    await query(
+    
+    // Then update it
+    const result = await query(
       `UPDATE nota_settings SET 
         shop_name = ?, 
         address = ?, 
@@ -77,37 +90,43 @@ const saveNotaData = async (userId, data) => {
         show_logo = ?, 
         show_qr_code = ?, 
         tax_rate = ?, 
-        currency = ? 
+        currency = ?,
+        updated_at = CURRENT_TIMESTAMP
        WHERE user_id = ?`,
       [
-        data.shop_name,
-        data.address,
-        data.phone,
-        data.footer_text,
-        data.show_logo ? 1 : 0,
-        data.show_qr_code ? 1 : 0,
-        data.tax_rate,
-        data.currency,
+        data.shop_name || defaultNota.shop_name,
+        data.address || '',
+        data.phone || '',
+        data.footer_text || defaultNota.footer_text,
+        data.show_logo !== undefined ? (data.show_logo ? 1 : 0) : (defaultNota.show_logo ? 1 : 0),
+        data.show_qr_code !== undefined ? (data.show_qr_code ? 1 : 0) : (defaultNota.show_qr_code ? 1 : 0),
+        data.tax_rate !== undefined ? data.tax_rate : defaultNota.tax_rate,
+        data.currency || defaultNota.currency,
         userId
       ]
     );
+    
     if (useSQLite) saveDatabase();
+    
+    console.log('Nota saved successfully for user:', userId, 'Data:', data);
     return true;
   } catch (error) {
     console.error('Error saving nota to database:', error);
+    throw error; // Re-throw to let caller handle it
   }
-  return false;
 };
 
 // Get nota settings
 exports.getNota = async (req, res) => {
   try {
     const userId = req.user.id;
+    console.log('[Nota] Getting nota for user:', userId);
     const nota = await getNotaData(userId);
+    console.log('[Nota] Got nota:', nota);
     res.json(nota);
   } catch (error) {
-    console.error('Error getting nota:', error);
-    res.status(500).json({ error: 'Failed to get nota settings' });
+    console.error('[Nota] Error getting nota:', error);
+    res.status(500).json({ error: 'Failed to get nota settings: ' + error.message });
   }
 };
 
@@ -115,17 +134,20 @@ exports.getNota = async (req, res) => {
 exports.updateNota = async (req, res) => {
   try {
     const userId = req.user.id;
-    const currentNota = await getNotaData(userId);
-    const updatedNota = { ...currentNota, ...req.body };
+    console.log('[Nota] Updating nota for user:', userId);
+    console.log('[Nota] Request body:', req.body);
     
-    if (await saveNotaData(userId, updatedNota)) {
-      res.json(updatedNota);
-    } else {
-      res.status(500).json({ error: 'Failed to save nota settings' });
-    }
+    const currentNota = await getNotaData(userId);
+    console.log('[Nota] Current nota:', currentNota);
+    
+    const updatedNota = { ...currentNota, ...req.body };
+    console.log('[Nota] Updated nota:', updatedNota);
+    
+    await saveNotaData(userId, updatedNota);
+    res.json(updatedNota);
   } catch (error) {
-    console.error('Error updating nota:', error);
-    res.status(500).json({ error: 'Failed to update nota settings' });
+    console.error('[Nota] Error updating nota:', error);
+    res.status(500).json({ error: 'Failed to update nota settings: ' + error.message });
   }
 };
 
@@ -133,13 +155,11 @@ exports.updateNota = async (req, res) => {
 exports.resetNota = async (req, res) => {
   try {
     const userId = req.user.id;
-    if (await saveNotaData(userId, defaultNota)) {
-      res.json(defaultNota);
-    } else {
-      res.status(500).json({ error: 'Failed to reset nota settings' });
-    }
+    console.log('[Nota] Resetting nota for user:', userId);
+    await saveNotaData(userId, defaultNota);
+    res.json(defaultNota);
   } catch (error) {
-    console.error('Error resetting nota:', error);
-    res.status(500).json({ error: 'Failed to reset nota settings' });
+    console.error('[Nota] Error resetting nota:', error);
+    res.status(500).json({ error: 'Failed to reset nota settings: ' + error.message });
   }
 };
