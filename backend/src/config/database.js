@@ -391,6 +391,21 @@ const initDatabase = async () => {
         console.log('Migration check/error for nota_settings:', migrationError.message);
       }
 
+      // Migration: Add logo column to nota_settings table if it doesn't exist (SQLite)
+      try {
+        const tableInfo = db.exec("PRAGMA table_info(nota_settings)");
+        const hasLogo = tableInfo[0]?.values.some(col => col[1] === 'logo');
+        if (!hasLogo) {
+          console.log('Migrating: Adding logo column to nota_settings table...');
+          db.run('ALTER TABLE nota_settings ADD COLUMN logo TEXT');
+          console.log('Migration complete: logo column added to nota_settings');
+        } else {
+          console.log('Migration: nota_settings table already has logo column');
+        }
+      } catch (migrationError) {
+        console.log('Migration check/error for nota_settings logo:', migrationError.message);
+      }
+
       // Create default admin user if not exists
       try {
         const stmt = db.prepare('SELECT * FROM users WHERE username = ?');
@@ -675,6 +690,24 @@ const initDatabase = async () => {
         }
       } catch (migrationError) {
         console.log('Migration check/error for MySQL nota_settings:', migrationError.message);
+      }
+
+      // Migration: Add logo column to nota_settings table if it doesn't exist (MySQL)
+      try {
+        const [columns] = await connection.query(`
+          SELECT COLUMN_NAME 
+          FROM INFORMATION_SCHEMA.COLUMNS 
+          WHERE TABLE_NAME = 'nota_settings' AND COLUMN_NAME = 'logo'
+        `);
+        if (columns.length === 0) {
+          console.log('Migrating MySQL: Adding logo column to nota_settings table...');
+          await connection.query('ALTER TABLE nota_settings ADD COLUMN logo TEXT');
+          console.log('Migration complete: logo column added to nota_settings (MySQL)');
+        } else {
+          console.log('Migration: MySQL nota_settings table already has logo column');
+        }
+      } catch (migrationError) {
+        console.log('Migration check/error for MySQL nota_settings logo:', migrationError.message);
       }
 
       console.log('MySQL database tables initialized successfully');

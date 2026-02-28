@@ -29,6 +29,7 @@ const POS = () => {
     show_qr_code: false,
     tax_rate: 0,
     currency: 'IDR',
+    logo: null,
   });
 
   useEffect(() => {
@@ -546,7 +547,11 @@ const POS = () => {
                 {/* Logo */}
                 {notaSettings.show_logo && (
                   <div className="text-center mb-3">
-                    <span className="text-4xl">🏪</span>
+                    {notaSettings.logo ? (
+                      <img src={notaSettings.logo} alt="Logo" className="h-16 w-auto object-contain mx-auto" />
+                    ) : (
+                      <span className="text-4xl">🏪</span>
+                    )}
                   </div>
                 )}
                 

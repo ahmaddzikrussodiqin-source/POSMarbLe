@@ -68,7 +68,7 @@ const AdminDashboard = () => {
   const [notaSettings, setNotaSettings] = useState({
     shop_name: 'POSMarbLe', address: '', phone: '',
     footer_text: 'Terima kasih telah belanja di toko kami!',
-    show_logo: true, show_qr_code: false, tax_rate: 0, currency: 'IDR',
+    show_logo: true, show_qr_code: false, tax_rate: 0, currency: 'IDR', logo: null,
   });
   const [loadingNota, setLoadingNota] = useState(false);
   const [savingNota, setSavingNota] = useState(false);
@@ -288,6 +288,32 @@ const AdminDashboard = () => {
     finally { setSavingNota(false); }
   };
   const handleNotaChange = (field, value) => { setNotaSettings({ ...notaSettings, [field]: value }); };
+  
+  // Handle logo upload and convert to base64
+  const handleLogoUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Check file size (max 500KB)
+      if (file.size > 500 * 1024) {
+        alert('Ukuran file terlalu besar. Maksimal 500KB.');
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNotaSettings({ ...notaSettings, logo: reader.result });
+      };
+      reader.onerror = () => {
+        alert('Gagal membaca file.');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+  
+  // Remove logo
+  const handleRemoveLogo = () => {
+    setNotaSettings({ ...notaSettings, logo: null });
+  };
 
   // Chart colors
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658'];
@@ -912,6 +938,42 @@ const AdminDashboard = () => {
                               <span className="text-sm font-medium text-gray-700">Tampilkan QR Code</span>
                             </label>
                           </div>
+                          {/* Logo Upload Section */}
+                          <div className="md:col-span-2 mt-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Logo Toko</label>
+                            <div className="flex items-center gap-4">
+                              <input 
+                                type="file" 
+                                accept="image/*"
+                                onChange={handleLogoUpload}
+                                className="block w-full text-sm text-gray-500
+                                  file:mr-4 file:py-2 file:px-4
+                                  file:rounded-full file:border-0
+                                  file:text-sm file:font-semibold
+                                  file:bg-amber-50 file:text-amber-700
+                                  hover:file:bg-amber-100"
+                              />
+                              {notaSettings.logo && (
+                                <button 
+                                  type="button"
+                                  onClick={handleRemoveLogo}
+                                  className="text-red-600 hover:text-red-800 text-sm"
+                                >
+                                  Hapus
+                                </button>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">Ukuran maksimal: 500KB (JPG, PNG, GIF)</p>
+                            {notaSettings.logo && (
+                              <div className="mt-2">
+                                <img 
+                                  src={notaSettings.logo} 
+                                  alt="Logo Preview" 
+                                  className="h-20 w-auto object-contain border rounded-lg p-1"
+                                />
+                              </div>
+                            )}
+                          </div>
                         </div>
                         <button type="submit" disabled={savingNota} className="bg-amber-600 text-white px-6 py-2 rounded-lg hover:bg-amber-700 transition disabled:bg-gray-400">
                           {savingNota ? 'Menyimpan...' : 'Simpan Pengaturan'}
@@ -923,7 +985,13 @@ const AdminDashboard = () => {
                         <h3 className="text-lg font-bold text-gray-800 mb-4">Preview Nota</h3>
                         <div className="bg-gray-50 p-4 rounded-lg max-w-md mx-auto">
                           <div className="text-center border-b pb-4 mb-4">
-                            {notaSettings.show_logo && <div className="text-2xl mb-2">🏪</div>}
+                            {notaSettings.show_logo && (
+                              notaSettings.logo ? (
+                                <img src={notaSettings.logo} alt="Logo" className="h-16 w-auto object-contain mx-auto mb-2" />
+                              ) : (
+                                <div className="text-2xl mb-2">🏪</div>
+                              )
+                            )}
                             <h4 className="font-bold text-lg">{notaSettings.shop_name}</h4>
                             <p className="text-sm text-gray-600">{notaSettings.address}</p>
                             <p className="text-sm text-gray-600">{notaSettings.phone}</p>
@@ -1013,6 +1081,13 @@ const AdminDashboard = () => {
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <div className="bg-white p-6 rounded-xl shadow-lg max-w-md w-full">
                 <div className="text-center mb-4">
+                  {notaSettings.show_logo && (
+                    notaSettings.logo ? (
+                      <img src={notaSettings.logo} alt="Logo" className="h-12 w-auto object-contain mx-auto mb-2" />
+                    ) : (
+                      <div className="text-2xl mb-2">🏪</div>
+                    )
+                  )}
                   <h3 className="text-lg font-bold">{notaSettings.shop_name}</h3>
                   <p className="text-sm text-gray-600">{notaSettings.address}</p>
                   <p className="text-sm text-gray-600">{notaSettings.phone}</p>

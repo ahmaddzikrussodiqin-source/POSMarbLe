@@ -10,6 +10,7 @@ const defaultNota = {
   show_qr_code: false,
   tax_rate: 0,
   currency: 'IDR',
+  logo: null,
 };
 
 // Ensure nota settings record exists for a user
@@ -23,8 +24,8 @@ const ensureNotaExists = async (userId) => {
       console.log('[Nota] Creating new nota settings for user:', userId);
       // Create default record for user
       await query(
-        `INSERT INTO nota_settings (user_id, shop_name, address, phone, footer_text, show_logo, show_qr_code, tax_rate, currency) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO nota_settings (user_id, shop_name, address, phone, footer_text, show_logo, show_qr_code, tax_rate, currency, logo) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           userId,
           defaultNota.shop_name,
@@ -34,7 +35,8 @@ const ensureNotaExists = async (userId) => {
           defaultNota.show_logo ? 1 : 0,
           defaultNota.show_qr_code ? 1 : 0,
           defaultNota.tax_rate,
-          defaultNota.currency
+          defaultNota.currency,
+          defaultNota.logo
         ]
       );
       if (useSQLite) saveDatabase();
@@ -65,7 +67,8 @@ const getNotaData = async (userId) => {
         show_logo: row.show_logo !== undefined ? Boolean(row.show_logo) : defaultNota.show_logo,
         show_qr_code: row.show_qr_code !== undefined ? Boolean(row.show_qr_code) : defaultNota.show_qr_code,
         tax_rate: row.tax_rate !== undefined ? parseFloat(row.tax_rate) : defaultNota.tax_rate,
-        currency: row.currency || defaultNota.currency
+        currency: row.currency || defaultNota.currency,
+        logo: row.logo || null
       };
     }
   } catch (error) {
@@ -91,6 +94,7 @@ const saveNotaData = async (userId, data) => {
         show_qr_code = ?, 
         tax_rate = ?, 
         currency = ?,
+        logo = ?,
         updated_at = CURRENT_TIMESTAMP
        WHERE user_id = ?`,
       [
@@ -102,6 +106,7 @@ const saveNotaData = async (userId, data) => {
         data.show_qr_code !== undefined ? (data.show_qr_code ? 1 : 0) : (defaultNota.show_qr_code ? 1 : 0),
         data.tax_rate !== undefined ? data.tax_rate : defaultNota.tax_rate,
         data.currency || defaultNota.currency,
+        data.logo || null,
         userId
       ]
     );
