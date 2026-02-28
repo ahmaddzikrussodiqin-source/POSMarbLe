@@ -653,7 +653,7 @@ const POS = () => {
               </div>
             </div>
 
-            <div className="p-4 bg-gray-50 flex gap-3">
+            <div className="p-4 bg-gray-50 flex gap-3 print:hidden">
               <button
                 onClick={handlePrint}
                 className="flex-1 py-3 bg-white border-2 border-amber-500 text-amber-600 rounded-xl font-bold hover:bg-amber-50 transition flex items-center justify-center gap-2"
