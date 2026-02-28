@@ -1253,7 +1253,7 @@ const openNewProductModal = () => { setEditingProduct(null); setProductForm({ na
                     </div>
                     <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
-<textarea value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} className="w-full border rounded-lg px-3 py-2" rows="2" placeholder="Deskripsi (opsional)"></textarea>
+                      <textarea value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} className="w-full border rounded-lg px-3 py-2" rows="2" placeholder="Deskripsi (opsional)"></textarea>
                     </div>
                     {/* Product Image Upload */}
                     <div className="md:col-span-2">
