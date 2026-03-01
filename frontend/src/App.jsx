@@ -55,7 +55,12 @@ function App() {
       <Router>
         <Routes>
           {/* Public routes */}
-          <Route path="/" element={<Landing />} />
+          {/* For Android, redirect root to login directly, skip landing page */}
+          {isAndroid ? (
+            <Route path="/" element={<Navigate to="/login" replace />} />
+          ) : (
+            <Route path="/" element={<Landing />} />
+          )}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           

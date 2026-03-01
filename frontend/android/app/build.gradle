@@ -24,8 +24,8 @@ android {
     }
     
     signingConfigs {
-        debug {
-            storeFile file("../../../my-release-key.keystore")
+        release {
+            storeFile file("/Users/diki/POSMarbLe/my-release-key.keystore")
             storePassword "diki123"
             keyAlias "posmarble"
             keyPassword "diki123"
@@ -36,7 +36,7 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
         }
     }
 }
