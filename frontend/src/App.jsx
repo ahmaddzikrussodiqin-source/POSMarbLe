@@ -10,8 +10,44 @@ import VersionBadge from './components/VersionBadge';
 import UpdateNotification from './components/UpdateNotification';
 import { Capacitor } from '@capacitor/core';
 
-// Check if running on Android platform
-const isAndroid = Capacitor.isNativePlatform() && navigator.userAgent.includes('Android');
+// Check if running on Android platform (Capacitor Android app)
+// Using multiple checks for reliability
+const isAndroid = (() => {
+  try {
+    // Method 1: Check Capacitor platform
+    const platform = Capacitor.getPlatform();
+    if (platform === 'android') {
+      return true;
+    }
+    
+    // Method 2: Check if Capacitor is native platform
+    if (Capacitor.isNativePlatform()) {
+      return true;
+    }
+    
+    // Method 3: Check for Capacitor object in window
+    if (typeof window !== 'undefined' && window.Capacitor) {
+      const cap = window.Capacitor;
+      if (cap.getPlatform && cap.getPlatform() === 'android') {
+        return true;
+      }
+      if (cap.isNativePlatform && cap.isNativePlatform()) {
+        return true;
+      }
+    }
+    
+    // Method 4: Check user agent for Android
+    if (typeof navigator !== 'undefined' && navigator.userAgent) {
+      const ua = navigator.userAgent.toLowerCase();
+      if (ua.includes('android')) {
+        return true;
+      }
+    }
+  } catch (e) {
+    console.log('Capacitor check error:', e);
+  }
+  return false;
+})();
 
 function App() {
   return (
