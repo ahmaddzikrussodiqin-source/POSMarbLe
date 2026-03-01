@@ -23,7 +23,6 @@ const AdminDashboard = () => {
   const [hourlySales, setHourlySales] = useState([]);
   const [bestSellingProducts, setBestSellingProducts] = useState([]);
   const [dailyPurchases, setDailyPurchases] = useState([]);
-  const [topCashiers, setTopCashiers] = useState([]);
   
   // Form states
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -112,16 +111,15 @@ const AdminDashboard = () => {
       };
 
       if (activeTab === 'dashboard') {
-        const [ordersRes, summaryRes, financialRes, dailySalesRes, hourlySalesRes, bestSellingRes, dailyPurchasesRes, topCashiersRes] = await Promise.all([
+        const [ordersRes, summaryRes, financialRes, dailySalesRes, hourlySalesRes, bestSellingRes, dailyPurchasesRes] = await Promise.all([
           ordersAPI.getAll(monthParams), reportsAPI.getSalesSummary(monthParams),
           reportsAPI.getFinancialSummary(monthParams), reportsAPI.getDailySales(monthParams),
           reportsAPI.getHourlySales(), reportsAPI.getBestSelling({ limit: 10, ...monthParams }),
-          reportsAPI.getDailyPurchases(monthParams), reportsAPI.getTopCashiers({ limit: 5 }),
+          reportsAPI.getDailyPurchases(monthParams),
         ]);
         setOrders(ordersRes.data); setSummary(summaryRes.data); setFinancialSummary(financialRes.data);
         setDailySales(dailySalesRes.data || []); setHourlySales(hourlySalesRes.data || []);
         setBestSellingProducts(bestSellingRes.data || []); setDailyPurchases(dailyPurchasesRes.data || []);
-        setTopCashiers(topCashiersRes.data || []);
       } else if (activeTab === 'purchasing') {
         const [ingredientsRes, purchasesRes, financialRes] = await Promise.all([
           ingredientsAPI.getAll(), purchasesAPI.getAll(monthParams), reportsAPI.getFinancialSummary(monthParams),
@@ -524,20 +522,6 @@ const openNewProductModal = () => { setEditingProduct(null); setProductForm({ na
                               <Tooltip formatter={(value) => formatCurrency(value)} contentStyle={{ fontSize: '12px' }} /><Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} />
                               <Area type="monotone" dataKey="total" stroke="#FF8042" fillOpacity={1} fill="url(#colorPurchases)" name="Pembelian" />
                             </AreaChart>
-                          </ResponsiveContainer>
-                        ) : (
-                          <div className="h-full flex items-center justify-center text-gray-400">{loading ? 'Memuat...' : 'Tidak ada data'}</div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Top Cashiers */}
-                    <div className="bg-white p-4 rounded-xl shadow overflow-hidden min-w-0">
-                      <h3 className="text-lg font-bold text-gray-800 mb-2">Kasir Terbaik</h3>
-                      <div className="min-h-0" style={{ height: '250px', minHeight: '250px' }}>
-                        {!loading && chartsReady && topCashiers.length > 0 ? (
-                          <ResponsiveContainer width="100%" height={250} minWidth={0}>
-                            <BarChart data={topCashiers} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" stroke="#eee" /><XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} /><Tooltip formatter={(value, name) => [name === 'total_sales' ? formatCurrency(value) : value, name === 'total_sales' ? 'Penjualan' : 'Pesanan']} contentStyle={{ fontSize: '12px' }} /><Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} /><Bar dataKey="total_sales" fill="#8884D8" name="Penjualan" /><Bar dataKey="total_orders" fill="#82CA9D" name="Pesanan" /></BarChart>
                           </ResponsiveContainer>
                         ) : (
                           <div className="h-full flex items-center justify-center text-gray-400">{loading ? 'Memuat...' : 'Tidak ada data'}</div>
