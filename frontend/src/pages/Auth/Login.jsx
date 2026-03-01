@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { Capacitor } from '@capacitor/core';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -10,6 +11,9 @@ const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Check if running on Android platform
+  const isAndroid = Capacitor.isNativePlatform() && navigator.userAgent.includes('Android');
 
   // Get success message from registration
   const successMessage = location.state?.message;
@@ -32,8 +36,11 @@ const Login = () => {
 
     try {
       const user = await login(username, password);
-      // Redirect based on role
-      if (user.role === 'admin') {
+      // For Android users, always redirect to /pos regardless of role
+      // For web users, redirect based on role
+      if (isAndroid) {
+        navigate('/pos');
+      } else if (user.role === 'admin') {
         navigate('/admin');
       } else {
         navigate('/pos');

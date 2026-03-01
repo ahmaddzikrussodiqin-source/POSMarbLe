@@ -8,6 +8,10 @@ import POS from './pages/POS/POS';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import VersionBadge from './components/VersionBadge';
 import UpdateNotification from './components/UpdateNotification';
+import { Capacitor } from '@capacitor/core';
+
+// Check if running on Android platform
+const isAndroid = Capacitor.isNativePlatform() && navigator.userAgent.includes('Android');
 
 function App() {
   return (
@@ -29,15 +33,25 @@ function App() {
             }
           />
           
-          {/* Admin Dashboard Route - accessible to all authenticated users */}
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute>
-                <AdminDashboard />
-              </ProtectedRoute>
-            }
-          />
+          {/* Admin Dashboard Route - only accessible on web (not Android) */}
+          {!isAndroid && (
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+          )}
+          
+          {/* Redirect /admin to /pos for Android users */}
+          {isAndroid && (
+            <Route
+              path="/admin"
+              element={<Navigate to="/pos" replace />}
+            />
+          )}
           
           {/* Default redirect for unknown routes */}
           <Route path="*" element={<Navigate to="/" replace />} />
