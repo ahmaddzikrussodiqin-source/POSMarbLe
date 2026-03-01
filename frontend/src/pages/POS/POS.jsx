@@ -18,6 +18,9 @@ const POS = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [showMenuModal, setShowMenuModal] = useState(false);
+  const [todaySales, setTodaySales] = useState([]);
+  const [showTodaySalesModal, setShowTodaySalesModal] = useState(false);
+  const [loadingTodaySales, setLoadingTodaySales] = useState(false);
   
   // Nota settings state
   const [notaSettings, setNotaSettings] = useState({
@@ -44,6 +47,200 @@ const POS = () => {
     } catch (error) {
       console.error('Error loading nota settings:', error);
     }
+  };
+
+  const loadTodaySales = async () => {
+    setLoadingTodaySales(true);
+    try {
+      const res = await ordersAPI.getToday();
+      setTodaySales(res.data);
+    } catch (error) {
+      console.error('Error loading today sales:', error);
+      alert('Gagal memuat penjualan hari ini');
+    } finally {
+      setLoadingTodaySales(false);
+    }
+  };
+
+  const handlePrintTodaySales = async () => {
+    await loadTodaySales();
+    setShowTodaySalesModal(true);
+  };
+
+  const handlePrintAllTodaySales = () => {
+    if (todaySales.length === 0) return;
+    
+    const printWindow = window.open('', '_blank', 'width=400,height=600');
+    
+    // Calculate totals
+    let totalAmount = 0;
+    let totalItems = 0;
+    todaySales.forEach(order => {
+      totalAmount += order.total_amount;
+      order.items.forEach(item => {
+        totalItems += item.quantity;
+      });
+    });
+
+    const ordersHtml = todaySales.map(order => {
+      const itemsList = order.items.map(item => `
+        <tr>
+          <td style="padding: 2px 0; font-size: 11px;">${item.product_name} x${item.quantity}</td>
+          <td style="text-align: right; padding: 2px 0; font-size: 11px;">${formatCurrency(item.subtotal, notaSettings.currency)}</td>
+        </tr>
+      `).join('');
+      
+      return `
+        <div style="border-bottom: 1px dashed #e5e7eb; padding: 8px 0;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <span style="font-weight: bold; color: #d97706;">${order.order_number}</span>
+            <span style="font-size: 12px;">${new Date(order.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+          <table style="width: 100%;">${itemsList}</table>
+          <div style="text-align: right; font-weight: bold; margin-top: 4px; color: #059669;">
+            Total: ${formatCurrency(order.total_amount, notaSettings.currency)}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    const today = new Date().toLocaleDateString('id-ID', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Laporan Penjualan Hari Ini</title>
+        <style>
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+            max-width: 300px;
+            margin: 0 auto;
+            color: #1f2937;
+          }
+          .header {
+            text-align: center;
+            padding-bottom: 15px;
+            border-bottom: 2px dashed #e5e7eb;
+            margin-bottom: 15px;
+          }
+          .logo {
+            font-size: 32px;
+            margin-bottom: 8px;
+          }
+          .shop-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 4px;
+          }
+          .date {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 8px;
+          }
+          .summary {
+            background: #f9fafb;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+          }
+          .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+          }
+          .summary-label {
+            color: #6b7280;
+            font-size: 12px;
+          }
+          .summary-value {
+            font-weight: bold;
+            font-size: 14px;
+          }
+          .total-row {
+            border-top: 1px dashed #e5e7eb;
+            padding-top: 8px;
+            margin-top: 8px;
+          }
+          .total-label {
+            font-size: 14px;
+            font-weight: bold;
+          }
+          .total-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #059669;
+          }
+          .orders-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #374151;
+          }
+          .footer {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 12px;
+            border-top: 1px solid #f3f4f6;
+            font-size: 11px;
+            color: #6b7280;
+          }
+          @media print {
+            body { margin: 0; padding: 10px; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="logo">${notaSettings.logo ? '<img src="' + notaSettings.logo + '" style="height: 40px;" />' : '🏪'}</div>
+          <div class="shop-name">${notaSettings.shop_name || 'Toko'}</div>
+          <div class="date">${today}</div>
+        </div>
+
+        <div class="summary">
+          <div class="summary-row">
+            <span class="summary-label">Jumlah Transaksi</span>
+            <span class="summary-value">${todaySales.length}</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Total Item Terjual</span>
+            <span class="summary-value">${totalItems}</span>
+          </div>
+          <div class="summary-row total-row">
+            <span class="total-label">Total Pendapatan</span>
+            <span class="total-value">${formatCurrency(totalAmount, notaSettings.currency)}</span>
+          </div>
+        </div>
+
+        <div class="orders-title">Detail Transaksi</div>
+        <div class="orders">
+          ${ordersHtml}
+        </div>
+
+        <div class="footer">
+          <p>${notaSettings.footer_text || 'Terima kasih atas kunjungan Anda!'}</p>
+          <p style="margin-top: 4px;">Dicetak pada: ${new Date().toLocaleString('id-ID')}</p>
+        </div>
+
+        <script>
+          window.onload = function() {
+            window.print();
+            window.onafterprint = function() {
+              window.close();
+            };
+          };
+        </script>
+      </body>
+      </html>
+    `);
+    
+    printWindow.document.close();
   };
 
   const loadData = async () => {
@@ -359,6 +556,15 @@ const POS = () => {
           </div>
         </div>
         <div className="flex items-center gap-4">
+          <button
+            onClick={handlePrintTodaySales}
+            className="bg-green-100 text-green-700 px-4 py-2 rounded-lg hover:bg-green-200 transition flex items-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            Cetak Hari Ini
+          </button>
           {isAdmin && (
             <button
               onClick={() => navigate('/admin')}
@@ -943,6 +1149,124 @@ const POS = () => {
                 className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-bold hover:from-amber-600 hover:to-orange-600 transition"
               >
                 Mengerti
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Today's Sales Modal */}
+      {showTodaySalesModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl p-0 max-w-2xl w-full shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-6 text-white flex-shrink-0">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold">Penjualan Hari Ini</h2>
+                    <p className="text-white text-sm opacity-90">
+                      {new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowTodaySalesModal(false)}
+                  className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center hover:bg-opacity-30 transition"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 flex-1 overflow-auto">
+              {loadingTodaySales ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin w-10 h-10 border-4 border-green-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                  <p className="text-gray-500">Memuat data...</p>
+                </div>
+              ) : todaySales.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="text-6xl mb-4">📊</div>
+                  <p className="text-gray-500 text-lg">Belum ada transaksi hari ini</p>
+                </div>
+              ) : (
+                <>
+                  {/* Summary Cards */}
+                  <div className="grid grid-cols-3 gap-4 mb-6">
+                    <div className="bg-blue-50 rounded-xl p-4 text-center">
+                      <p className="text-blue-600 text-sm font-medium">Transaksi</p>
+                      <p className="text-2xl font-bold text-blue-700">{todaySales.length}</p>
+                    </div>
+                    <div className="bg-green-50 rounded-xl p-4 text-center">
+                      <p className="text-green-600 text-sm font-medium">Item Terjual</p>
+                      <p className="text-2xl font-bold text-green-700">
+                        {todaySales.reduce((sum, order) => sum + order.items.reduce((s, item) => s + item.quantity, 0), 0)}
+                      </p>
+                    </div>
+                    <div className="bg-amber-50 rounded-xl p-4 text-center">
+                      <p className="text-amber-600 text-sm font-medium">Total</p>
+                      <p className="text-2xl font-bold text-amber-700">
+                        {formatCurrency(todaySales.reduce((sum, order) => sum + order.total_amount, 0), notaSettings.currency)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Transactions List */}
+                  <h3 className="font-bold text-gray-800 mb-3">Detail Transaksi</h3>
+                  <div className="space-y-3 max-h-64 overflow-auto">
+                    {todaySales.map((order) => (
+                      <div key={order.id} className="bg-gray-50 rounded-xl p-4">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="font-bold text-amber-600">{order.order_number}</span>
+                          <span className="text-sm text-gray-500">
+                            {new Date(order.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                        <div className="space-y-1 mb-2">
+                          {order.items.map((item, idx) => (
+                            <div key={idx} className="flex justify-between text-sm">
+                              <span className="text-gray-600">{item.product_name} x{item.quantity}</span>
+                              <span className="text-gray-800">{formatCurrency(item.subtotal, notaSettings.currency)}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="border-t pt-2 mt-2 flex justify-between">
+                          <span className="font-medium text-gray-700">Total</span>
+                          <span className="font-bold text-green-600">{formatCurrency(order.total_amount, notaSettings.currency)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 bg-gray-50 flex gap-3 flex-shrink-0">
+              <button
+                onClick={handlePrintAllTodaySales}
+                disabled={todaySales.length === 0 || loadingTodaySales}
+                className="flex-1 py-3 bg-white border-2 border-green-500 text-green-600 rounded-xl font-bold hover:bg-green-50 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                Cetak Laporan
+              </button>
+              <button
+                onClick={() => setShowTodaySalesModal(false)}
+                className="flex-1 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-bold hover:from-amber-600 hover:to-orange-600 transition"
+              >
+                Tutup
               </button>
             </div>
           </div>
