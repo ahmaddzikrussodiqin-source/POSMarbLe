@@ -1,20 +1,23 @@
-# TODO - Hide Admin Mode for Android
+# TODO - Hide Admin Button on Android
 
-## Task: Hide admin mode for Android app users
+## Task: Hide Admin button in POS mode for Android app
 
 ### Steps:
-- [x] 1. Modify App.jsx - Add platform detection and hide admin route for Android
-- [x] 2. Modify Login.jsx - Redirect to /pos instead of /admin for Android users
-- [x] 3. Build and sign Android APK
+- [x] 1. Analyze POS.jsx to find Admin button location
+- [x] 2. Import Capacitor from @capacitor/core
+- [x] 3. Add isAndroid detection function
+- [x] 4. Modify Admin button condition to hide on Android
 
-### Status: Completed
+### File edited:
+- frontend/src/pages/POS/POS.jsx
 
-### APK Location:
-- `/Users/diki/POSMarbLe/POSMarbLe-v1.01.0.apk` (3.3 MB)
+### Changes made:
+1. Added import: `import { Capacitor } from '@capacitor/core';`
+2. Added isAndroid detection function (IIFE) that checks:
+   - Capacitor.getPlatform() === 'android'
+   - Capacitor.isNativePlatform()
+   - window.Capacitor
+   - navigator.userAgent
+3. Changed Admin button condition from `{isAdmin && ...}` to `{isAdmin && !isAndroid && ...}`
 
-### Keystore Info:
-- Keystore: `my-release-key.keystore`
-- Alias: `posmarble`
-- Store password: `diki123`
-- Key password: `diki123`
 

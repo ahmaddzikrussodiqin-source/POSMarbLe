@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { categoriesAPI, productsAPI, ordersAPI, notaAPI } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
 
 const POS = () => {
   const { user, logout, isAdmin } = useAuth();
@@ -21,6 +22,44 @@ const POS = () => {
   const [todaySales, setTodaySales] = useState([]);
   const [showTodaySalesModal, setShowTodaySalesModal] = useState(false);
   const [loadingTodaySales, setLoadingTodaySales] = useState(false);
+  
+  // Check if running on Android platform (Capacitor Android app)
+  const isAndroid = (() => {
+    try {
+      // Method 1: Check Capacitor platform
+      const platform = Capacitor.getPlatform();
+      if (platform === 'android') {
+        return true;
+      }
+      
+      // Method 2: Check if Capacitor is native platform
+      if (Capacitor.isNativePlatform()) {
+        return true;
+      }
+      
+      // Method 3: Check for Capacitor object in window
+      if (typeof window !== 'undefined' && window.Capacitor) {
+        const cap = window.Capacitor;
+        if (cap.getPlatform && cap.getPlatform() === 'android') {
+          return true;
+        }
+        if (cap.isNativePlatform && cap.isNativePlatform()) {
+          return true;
+        }
+      }
+      
+      // Method 4: Check user agent for Android
+      if (typeof navigator !== 'undefined' && navigator.userAgent) {
+        const ua = navigator.userAgent.toLowerCase();
+        if (ua.includes('android')) {
+          return true;
+        }
+      }
+    } catch (e) {
+      console.log('Capacitor check error:', e);
+    }
+    return false;
+  })();
   
   // Nota settings state
   const [notaSettings, setNotaSettings] = useState({
@@ -565,7 +604,7 @@ const POS = () => {
             </svg>
             Cetak Hari Ini
           </button>
-          {isAdmin && (
+          {isAdmin && !isAndroid && (
             <button
               onClick={() => navigate('/admin')}
               className="bg-amber-100 text-amber-700 px-4 py-2 rounded-lg hover:bg-amber-200 transition flex items-center gap-2"
