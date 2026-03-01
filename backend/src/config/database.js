@@ -406,6 +406,9 @@ const initDatabase = async () => {
         console.log('Migration check/error for nota_settings logo:', migrationError.message);
       }
 
+      // Note: SQLite uses dynamic typing, so TEXT can hold any size. 
+      // No migration needed for image_url in SQLite.
+
       // Create default admin user if not exists
       try {
         const stmt = db.prepare('SELECT * FROM users WHERE username = ?');
@@ -708,6 +711,42 @@ const initDatabase = async () => {
         }
       } catch (migrationError) {
         console.log('Migration check/error for MySQL nota_settings logo:', migrationError.message);
+      }
+
+      // Migration: Change image_url column from VARCHAR(255) to TEXT in products table (MySQL)
+      try {
+        const [columns] = await connection.query(`
+          SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH 
+          FROM INFORMATION_SCHEMA.COLUMNS 
+          WHERE TABLE_NAME = 'products' AND COLUMN_NAME = 'image_url'
+        `);
+        if (columns.length > 0 && columns[0].DATA_TYPE === 'varchar') {
+          console.log('Migrating MySQL: Changing image_url column to TEXT in products table...');
+          await connection.query('ALTER TABLE products MODIFY COLUMN image_url TEXT');
+          console.log('Migration complete: image_url column changed to TEXT (MySQL)');
+        } else {
+          console.log('Migration: MySQL products table image_url is already TEXT or does not exist');
+        }
+      } catch (migrationError) {
+        console.log('Migration check/error for MySQL products image_url:', migrationError.message);
+      }
+
+      // Migration: Change price column from DECIMAL(10,2) to DECIMAL(15,2) in products table (MySQL)
+      try {
+        const [columns] = await connection.query(`
+          SELECT COLUMN_NAME, DATA_TYPE, NUMERIC_PRECISION, NUMERIC_SCALE 
+          FROM INFORMATION_SCHEMA.COLUMNS 
+          WHERE TABLE_NAME = 'products' AND COLUMN_NAME = 'price'
+        `);
+        if (columns.length > 0 && columns[0].NUMERIC_PRECISION === 10) {
+          console.log('Migrating MySQL: Changing price column to DECIMAL(15,2) in products table...');
+          await connection.query('ALTER TABLE products MODIFY COLUMN price DECIMAL(15, 2) NOT NULL');
+          console.log('Migration complete: price column changed to DECIMAL(15,2) (MySQL)');
+        } else {
+          console.log('Migration: MySQL products table price is already DECIMAL(15,2) or does not exist');
+        }
+      } catch (migrationError) {
+        console.log('Migration check/error for MySQL products price:', migrationError.message);
       }
 
       console.log('MySQL database tables initialized successfully');

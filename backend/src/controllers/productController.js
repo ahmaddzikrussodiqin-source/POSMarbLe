@@ -133,8 +133,21 @@ const productController = {
         return res.status(400).json({ error: 'Product name and price are required' });
       }
 
-      // Ensure numeric values are properly converted
+      // Validate price is within reasonable range
       const priceValue = parseFloat(price);
+      if (isNaN(priceValue) || priceValue < 0) {
+        return res.status(400).json({ error: 'Price must be a valid positive number' });
+      }
+      if (priceValue > 999999999999) {
+        return res.status(400).json({ error: 'Price is too large (max: 999,999,999,999)' });
+      }
+
+      // Validate image_url is not too large (base64 limit ~1MB for safety)
+      if (image_url && image_url.length > 1000000) {
+        return res.status(400).json({ error: 'Image is too large (max size: ~1MB)' });
+      }
+
+      // Ensure numeric values are properly converted
       const categoryIdValue = category_id ? parseInt(category_id) : null;
       const stockValue = stock ? parseInt(stock) : 0;
       const isAvailableValue = is_available !== false ? 1 : 0;
@@ -209,6 +222,22 @@ const productController = {
       const [existing] = await query('SELECT * FROM products WHERE id = ? AND user_id = ?', [id, userId]);
       if (!existing || existing.length === 0) {
         return res.status(404).json({ error: 'Product not found' });
+      }
+
+      // Validate price if provided
+      if (price !== undefined && price !== null) {
+        const priceValue = parseFloat(price);
+        if (isNaN(priceValue) || priceValue < 0) {
+          return res.status(400).json({ error: 'Price must be a valid positive number' });
+        }
+        if (priceValue > 999999999999) {
+          return res.status(400).json({ error: 'Price is too large (max: 999,999,999,999)' });
+        }
+      }
+
+      // Validate image_url is not too large if provided
+      if (image_url && image_url.length > 1000000) {
+        return res.status(400).json({ error: 'Image is too large (max size: ~1MB)' });
       }
 
       await query(
