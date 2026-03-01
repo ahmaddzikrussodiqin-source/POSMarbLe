@@ -5,7 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  // Use absolute paths for assets when deployed with Express backend
-  // This fixes MIME type errors when frontend is served by Express backend
-  base: '/',
+  // Use relative paths for assets - this fixes MIME type errors
+  // when frontend is served by Express backend in subdirectory or proxy
+  base: './',
 })
