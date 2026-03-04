@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { categoriesAPI, productsAPI, ordersAPI, notaAPI } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
+import { App as CapacitorApp } from '@capacitor/app';
 
 const POS = () => {
   const { user, logout, isAdmin } = useAuth();
@@ -65,7 +66,56 @@ const POS = () => {
 
   // Debug: log platform info
   console.log('Platform detection - isAndroid:', isAndroid, 'Capacitor platform:', Capacitor.getPlatform());
-  
+
+  // Handle hardware back button on Android
+  const handleBackButton = useCallback(() => {
+    // Close any open modal in order of priority
+    if (showTodaySalesModal) {
+      setShowTodaySalesModal(false);
+      return;
+    }
+    if (showReceipt) {
+      setShowReceipt(null);
+      return;
+    }
+    if (showMenuModal) {
+      setShowMenuModal(false);
+      return;
+    }
+    if (selectedProduct) {
+      setSelectedProduct(null);
+      return;
+    }
+  }, [showTodaySalesModal, showReceipt, showMenuModal, selectedProduct]);
+
+  useEffect(() => {
+    // Add hardware back button listener for Android
+    if (isAndroid && CapacitorApp) {
+      const removeListener = CapacitorApp.addListener('backButton', handleBackButton);
+      return () => {
+        removeListener.then(fn => fn());
+      };
+    }
+  }, [isAndroid, handleBackButton]);
+
+  // Handle browser back button (fallback for hybrid apps)
+  useEffect(() => {
+    const handlePopState = () => {
+      if (showTodaySalesModal) {
+        setShowTodaySalesModal(false);
+      } else if (showReceipt) {
+        setShowReceipt(null);
+      } else if (showMenuModal) {
+        setShowMenuModal(false);
+      } else if (selectedProduct) {
+        setSelectedProduct(null);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [showTodaySalesModal, showReceipt, showMenuModal, selectedProduct]);
+
   // Nota settings state
   const [notaSettings, setNotaSettings] = useState({
     shop_name: 'POSMarbLe',
