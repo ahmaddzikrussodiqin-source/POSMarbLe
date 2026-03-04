@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { categoriesAPI, productsAPI, ordersAPI, notaAPI } from '../../services/api';
+import printerService, { PrinterService } from '../../services/printerService';
 import { useNavigate } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
@@ -23,6 +24,13 @@ const POS = () => {
   const [todaySales, setTodaySales] = useState([]);
   const [showTodaySalesModal, setShowTodaySalesModal] = useState(false);
   const [loadingTodaySales, setLoadingTodaySales] = useState(false);
+  
+  // Printer state
+  const [selectedPrinter, setSelectedPrinter] = useState(null);
+  const [showPrinterModal, setShowPrinterModal] = useState(false);
+  const [connectingPrinter, setConnectingPrinter] = useState(false);
+  const [bluetoothSupported, setBluetoothSupported] = useState(true);
+  const [printerConnected, setPrinterConnected] = useState(false);
   
   // Check if running on Android platform (Capacitor Android app)
   // Using multiple detection methods for reliability
@@ -134,6 +142,25 @@ const POS = () => {
     loadNotaSettings();
   }, []);
 
+  // Check Bluetooth support and load saved printer
+  useEffect(() => {
+    // Check if Bluetooth is supported
+    setBluetoothSupported(printerService.isBluetoothSupported());
+    
+    // Try to load saved printer from localStorage
+    const savedPrinter = localStorage.getItem('selectedPrinter');
+    if (savedPrinter) {
+      try {
+        const printer = JSON.parse(savedPrinter);
+        setSelectedPrinter(printer);
+        // Note: We can't auto-connect on page load due to browser security
+        // User needs to reconnect each session
+      } catch (e) {
+        console.error('Error loading saved printer:', e);
+      }
+    }
+  }, []);
+
   const loadNotaSettings = async () => {
     try {
       const res = await notaAPI.get();
@@ -141,6 +168,49 @@ const POS = () => {
     } catch (error) {
       console.error('Error loading nota settings:', error);
     }
+  };
+
+  // Printer handlers
+  const handleConnectPrinter = async () => {
+    setConnectingPrinter(true);
+    try {
+      const result = await printerService.connectToPrinter();
+      setSelectedPrinter(result);
+      setPrinterConnected(true);
+      // Save to localStorage
+      localStorage.setItem('selectedPrinter', JSON.stringify(result));
+      alert('Printer terhubung: ' + result.name);
+    } catch (error) {
+      console.error('Error connecting to printer:', error);
+      alert('Gagal menghubungkan printer: ' + (error.message || 'Tidak diketahui'));
+    } finally {
+      setConnectingPrinter(false);
+    }
+  };
+
+  const handleDisconnectPrinter = async () => {
+    try {
+      await printerService.disconnect();
+      setPrinterConnected(false);
+      setSelectedPrinter(null);
+      localStorage.removeItem('selectedPrinter');
+    } catch (error) {
+      console.error('Error disconnecting printer:', error);
+    }
+  };
+
+  const handlePrintWithPrinter = async (receiptData) => {
+    if (printerConnected && selectedPrinter) {
+      try {
+        await printerService.printReceipt(receiptData);
+        return true;
+      } catch (error) {
+        console.error('Error printing to Bluetooth printer:', error);
+        alert('Gagal cetak ke printer Bluetooth, akan menggunakan browser print');
+        return false;
+      }
+    }
+    return false;
   };
 
   const loadTodaySales = async () => {
@@ -161,9 +231,70 @@ const POS = () => {
     setShowTodaySalesModal(true);
   };
 
-  const handlePrintAllTodaySales = () => {
+const handlePrintAllTodaySales = async () => {
     if (todaySales.length === 0) return;
-    
+
+    // Try Bluetooth printing first if connected
+    if (printerConnected && selectedPrinter) {
+      try {
+        // Format data for printer
+        let totalAmount = 0;
+        let totalItems = 0;
+        todaySales.forEach(order => {
+          totalAmount += order.total_amount;
+          order.items.forEach(item => {
+            totalItems += item.quantity;
+          });
+        });
+
+        const WIDTH = 32;
+        let printData = '';
+        printData += PrinterService.COMMANDS.INIT;
+        printData += PrinterService.COMMANDS.ALIGN_CENTER;
+        printData += PrinterService.COMMANDS.BOLD_ON;
+        printData += 'LAPORAN PENJUALAN HARI INI\n';
+        printData += PrinterService.COMMANDS.BOLD_OFF;
+        
+        const today = new Date().toLocaleDateString('id-ID', { 
+          weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+        });
+        printData += today + '\n';
+        printData += PrinterService.COMMANDS.ALIGN_LEFT;
+        printData += '-'.repeat(WIDTH) + '\n';
+        
+        printData += `Transaksi: ${todaySales.length}\n`;
+        printData += `Item Terjual: ${totalItems}\n`;
+        printData += '-'.repeat(WIDTH) + '\n';
+        
+        // Print each order
+        todaySales.forEach(order => {
+          printData += `${order.order_number} - ${new Date(order.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}\n`;
+          order.items.forEach(item => {
+            printData += `  ${item.product_name} x${item.quantity}\n`;
+          });
+          printData += `  TOTAL: ${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(order.total_amount)}\n\n`;
+        });
+        
+        printData += '-'.repeat(WIDTH) + '\n';
+        printData += PrinterService.COMMANDS.BOLD_ON;
+        printData += 'TOTAL: ' + new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalAmount) + '\n';
+        printData += PrinterService.COMMANDS.BOLD_OFF;
+        
+        printData += '\n' + (notaSettings.footer_text || 'Terima kasih') + '\n';
+        printData += PrinterService.COMMANDS.FEED_LINES(3);
+        printData += PrinterService.COMMANDS.CUT_PARTIAL;
+        
+        await printerService.sendData(printData);
+        alert('Laporan berhasil dicetak ke printer Bluetooth');
+        return;
+      } catch (error) {
+        console.error('Bluetooth print failed:', error);
+        alert('Gagal cetak ke printer Bluetooth, akan membuka dialog print browser');
+        // Fall through to browser print
+      }
+    }
+
+    // Browser print (original implementation)
     const printWindow = window.open('', '_blank', 'width=400,height=600');
     
     // Calculate totals
@@ -452,8 +583,29 @@ const POS = () => {
     return Math.round(amount * (taxRate / 100));
   };
 
-  // Handle print receipt
-  const handlePrint = () => {
+// Handle print receipt
+  const handlePrint = async () => {
+    // Try Bluetooth printing first if connected
+    if (printerConnected && selectedPrinter) {
+      try {
+        const receiptData = {
+          notaSettings,
+          showReceipt,
+          paymentMethod: showReceipt.payment_method,
+          calculateTax
+        };
+        await printerService.printReceipt(receiptData);
+        // Show success message but still allow user to do browser print if needed
+        // Optional: You can uncomment the next line to skip browser print
+        // return; 
+      } catch (error) {
+        console.error('Bluetooth print failed:', error);
+        alert('Gagal cetak ke printer Bluetooth, akan membuka dialog print browser');
+        // Fall through to browser print
+      }
+    }
+    
+    // Browser print (original implementation)
     // Create a new window with only the receipt content for printing
     const printWindow = window.open('', '_blank', 'width=400,height=600');
     
@@ -648,6 +800,27 @@ const POS = () => {
             <h1 className="text-xl font-bold text-gray-800">POSMarbLe</h1>
             <p className="text-xs text-gray-500">Point of Sale</p>
           </div>
+          
+          {/* Printer Selection Button */}
+          <button
+            onClick={() => setShowPrinterModal(true)}
+            className={`ml-3 flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all ${
+              printerConnected 
+                ? 'bg-green-50 border-green-500 text-green-700' 
+                : 'bg-gray-50 border-gray-300 text-gray-600 hover:bg-gray-100'
+            }`}
+            title={selectedPrinter ? `Printer: ${selectedPrinter.name}` : 'Pilih Printer'}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            <span className="text-sm font-medium">
+              {selectedPrinter ? selectedPrinter.name.substring(0, 12) + (selectedPrinter.name.length > 12 ? '...' : '') : 'Printer'}
+            </span>
+            {printerConnected && (
+              <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+            )}
+          </button>
         </div>
         <div className="flex items-center gap-4">
           <button
@@ -1366,8 +1539,150 @@ const POS = () => {
           </div>
         </div>
       )}
+
+      {/* Printer Selection Modal */}
+      {showPrinterModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl p-0 max-w-sm w-full shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-6 text-white">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold">Pilih Printer</h2>
+                    <p className="text-white text-sm opacity-90">Koneksi Bluetooth</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowPrinterModal(false)}
+                  className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center hover:bg-opacity-30 transition"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              {/* Bluetooth Status */}
+              {!bluetoothSupported ? (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
+                  <div className="flex gap-3">
+                    <div className="text-2xl">⚠️</div>
+                    <div>
+                      <p className="text-red-800 font-medium text-sm">Bluetooth Tidak Didukung</p>
+                      <p className="text-red-600 text-xs">Silakan gunakan browser Chrome/Edge di Android</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Current Printer Status */}
+                  {printerConnected && selectedPrinter ? (
+                    <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                            <span className="text-green-600">✓</span>
+                          </div>
+                          <div>
+                            <p className="text-green-800 font-medium text-sm">Printer Terhubung</p>
+                            <p className="text-green-600 text-xs">{selectedPrinter.name}</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={handleDisconnectPrinter}
+                          className="text-red-500 hover:text-red-700 text-sm font-medium"
+                        >
+                          Putus
+                        </button>
+                      </div>
+                    </div>
+                  ) : selectedPrinter ? (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="text-2xl">⚡</div>
+                        <div className="flex-1">
+                          <p className="text-yellow-800 font-medium text-sm">Printer Tersimpan</p>
+                          <p className="text-yellow-600 text-xs">{selectedPrinter.name}</p>
+                        </div>
+                      </div>
+                      <p className="text-yellow-700 text-xs mt-2">Silakan hubungkan ulang printer</p>
+                    </div>
+                  ) : null}
+
+                  {/* Connect Button */}
+                  <button
+                    onClick={handleConnectPrinter}
+                    disabled={connectingPrinter}
+                    className="w-full py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-bold hover:from-blue-600 hover:to-indigo-700 transition flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {connectingPrinter ? (
+                      <>
+                        <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Menghubungkan...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                        Scan & Hubungkan Printer
+                      </>
+                    )}
+                  </button>
+
+                  {/* Info Box */}
+                  <div className="mt-4 bg-gray-50 border border-gray-200 rounded-xl p-4">
+                    <div className="flex gap-3">
+                      <div className="text-2xl">💡</div>
+                      <div>
+                        <p className="text-gray-800 font-medium text-sm">Cara Menggunakan:</p>
+                        <ol className="text-gray-600 text-xs mt-1 list-decimal list-inside">
+                          <li>Klik tombol "Scan & Hubungkan Printer"</li>
+                          <li>Pilih printer thermal dari daftar</li>
+                          <li>Tunggu hingga terhubung</li>
+                          <li>Printer akan otomatis digunakan untuk cetak nota</li>
+                        </ol>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Browser Print Option */}
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <p className="text-gray-500 text-xs text-center">
+                      Atau gunakan print browser dengan memilih printer saat klik "Print" di nota
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 bg-gray-50">
+              <button
+                onClick={() => setShowPrinterModal(false)}
+                className="w-full py-3 bg-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-300 transition"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
+// Export default POS component
 export default POS;
