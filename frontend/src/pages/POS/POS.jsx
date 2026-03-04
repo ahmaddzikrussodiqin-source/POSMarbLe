@@ -24,20 +24,30 @@ const POS = () => {
   const [loadingTodaySales, setLoadingTodaySales] = useState(false);
   
   // Check if running on Android platform (Capacitor Android app)
+  // Using multiple detection methods for reliability
   const isAndroid = (() => {
     try {
-      // Method 1: Check Capacitor platform
+      // Method 1: Check user agent for Android (most reliable in WebView)
+      if (typeof navigator !== 'undefined' && navigator.userAgent) {
+        const ua = navigator.userAgent.toLowerCase();
+        // Check for Android in user agent
+        if (ua.includes('android') || ua.includes('linux; u; android')) {
+          return true;
+        }
+      }
+      
+      // Method 2: Check Capacitor platform
       const platform = Capacitor.getPlatform();
       if (platform === 'android') {
         return true;
       }
       
-      // Method 2: Check if Capacitor is native platform
+      // Method 3: Check if Capacitor is native platform
       if (Capacitor.isNativePlatform()) {
         return true;
       }
       
-      // Method 3: Check for Capacitor object in window
+      // Method 4: Check for Capacitor object in window
       if (typeof window !== 'undefined' && window.Capacitor) {
         const cap = window.Capacitor;
         if (cap.getPlatform && cap.getPlatform() === 'android') {
@@ -47,19 +57,14 @@ const POS = () => {
           return true;
         }
       }
-      
-      // Method 4: Check user agent for Android
-      if (typeof navigator !== 'undefined' && navigator.userAgent) {
-        const ua = navigator.userAgent.toLowerCase();
-        if (ua.includes('android')) {
-          return true;
-        }
-      }
     } catch (e) {
-      console.log('Capacitor check error:', e);
+      console.log('Platform check error:', e);
     }
     return false;
   })();
+
+  // Debug: log platform info
+  console.log('Platform detection - isAndroid:', isAndroid, 'Capacitor platform:', Capacitor.getPlatform());
   
   // Nota settings state
   const [notaSettings, setNotaSettings] = useState({
