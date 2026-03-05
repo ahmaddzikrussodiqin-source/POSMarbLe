@@ -106,6 +106,23 @@ const POS = () => {
     }
   }, [isAndroid, handleBackButton]);
 
+  // Handle print completed from browser (for WebView)
+  const handlePrintComplete = () => {
+    setShowReceipt(null);
+  };
+
+  // Listen for print completed messages from browser print window
+  useEffect(() => {
+    const handlePrintMessage = (event) => {
+      if (event.data && event.data.type === 'print-completed') {
+        handlePrintComplete();
+      }
+    };
+    
+    window.addEventListener('message', handlePrintMessage);
+    return () => window.removeEventListener('message', handlePrintMessage);
+  }, []);
+
   // Handle browser back button (fallback for hybrid apps)
   useEffect(() => {
     const handlePopState = () => {
@@ -235,7 +252,7 @@ const POS = () => {
     setShowTodaySalesModal(true);
   };
 
-const handlePrintAllTodaySales = async () => {
+  const handlePrintAllTodaySales = async () => {
     if (todaySales.length === 0) return;
 
     // Try Bluetooth printing first if connected
@@ -587,9 +604,9 @@ const handlePrintAllTodaySales = async () => {
     return Math.round(amount * (taxRate / 100));
   };
 
-// Handle print receipt
+  // Handle print receipt
   const handlePrint = async () => {
-    // Try Bluetooth printing first if connected
+    // First, try Bluetooth printing if connected
     if (printerConnected && selectedPrinter) {
       try {
         const receiptData = {
@@ -599,19 +616,134 @@ const handlePrintAllTodaySales = async () => {
           calculateTax
         };
         await printerService.printReceipt(receiptData);
-        // Show success message but still allow user to do browser print if needed
-        // Optional: You can uncomment the next line to skip browser print
-        // return; 
+        
+        // Print successful with Bluetooth - close modal and return to POS
+        alert('Nota berhasil dicetak!');
+        setShowReceipt(null);
+        return;
       } catch (error) {
         console.error('Bluetooth print failed:', error);
         alert('Gagal cetak ke printer Bluetooth, akan membuka dialog print browser');
-        // Fall through to browser print
+        // Continue to browser print fallback
       }
     }
     
-    // Browser print (original implementation)
-    // Create a new window with only the receipt content for printing
+    // Browser print fallback
+    // Check if we're on Android - use a different approach for better compatibility
+    if (isAndroid) {
+      // On Android WebView, use direct print in the same window
+      // Create print content
+      const totalWithTax = notaSettings.tax_rate > 0 
+        ? showReceipt.total_amount + calculateTax(showReceipt.total_amount, notaSettings.tax_rate)
+        : showReceipt.total_amount;
+      
+      const itemsHtml = showReceipt.items.map(item => `
+        <tr>
+          <td style="padding: 4px 0;">
+            <div style="font-weight: 500;">${item.product_name}</div>
+            <div style="color: #6b7280; font-size: 12px;">x${item.quantity}</div>
+          </td>
+          <td style="text-align: right; padding: 4px 0;">${formatCurrency(item.subtotal, notaSettings.currency)}</td>
+        </tr>
+      `).join('');
+
+      const taxHtml = notaSettings.tax_rate > 0 ? `
+        <tr>
+          <td style="padding: 4px 0; color: #6b7280;">Pajak (${notaSettings.tax_rate}%)</td>
+          <td style="text-align: right; padding: 4px 0;">${formatCurrency(calculateTax(showReceipt.total_amount, notaSettings.tax_rate), notaSettings.currency)}</td>
+        </tr>
+      ` : '';
+
+      // Create a hidden div with print content
+      const printContent = `
+        <div id="print-content" style="display: none;">
+          <div style="padding: 20px; max-width: 300px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1f2937;">
+            <div style="text-align: center; padding-bottom: 15px; border-bottom: 2px dashed #e5e7eb; margin-bottom: 15px;">
+              <div style="font-size: 32px; margin-bottom: 8px;">${notaSettings.logo ? '<img src="' + notaSettings.logo + '" style="height: 40px;" />' : '🏪'}</div>
+              <div style="font-size: 18px; font-weight: bold; margin-bottom: 4px;">${notaSettings.shop_name || 'Toko'}</div>
+              ${notaSettings.address ? `<div style="font-size: 12px; color: #6b7280; margin: 2px 0;">${notaSettings.address}</div>` : ''}
+              ${notaSettings.phone ? `<div style="font-size: 12px; color: #6b7280; margin: 2px 0;">Telp: ${notaSettings.phone}</div>` : ''}
+              <div style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e5e7eb;">
+                <div style="font-size: 11px; color: #6b7280;">Nomor Pesanan</div>
+                <div style="font-size: 20px; font-weight: bold; color: #d97706;">${showReceipt.order_number}</div>
+              </div>
+            </div>
+            <table style="width: 100%; border-collapse: collapse;">
+              ${itemsHtml}
+              <tr style="padding: 8px 0; border-bottom: 1px solid #f3f4f6;">
+                <td style="padding: 8px 0;">Subtotal</td>
+                <td style="text-align: right;">${formatCurrency(showReceipt.total_amount, notaSettings.currency)}</td>
+              </tr>
+              ${taxHtml}
+              <tr style="padding: 12px 0;">
+                <td style="font-size: 16px; font-weight: bold;">Total</td>
+                <td style="font-size: 22px; font-weight: bold; color: #d97706; text-align: right;">${formatCurrency(totalWithTax, notaSettings.currency)}</td>
+              </tr>
+            </table>
+            <div style="background: #f9fafb; padding: 12px; border-radius: 8px; text-align: center; margin-top: 16px;">
+              <div style="font-size: 12px; color: #6b7280;">Metode Pembayaran</div>
+              <div style="font-weight: bold;">${showReceipt.payment_method === 'cash' ? 'Tunai' : showReceipt.payment_method === 'qris' ? 'QRIS' : 'Kartu Debit'}</div>
+            </div>
+            <div style="text-align: center; margin-top: 20px; padding-top: 12px; border-top: 1px solid #f3f4f6;">
+              <div style="color: #d97706; font-weight: 500;">${notaSettings.shop_name || 'Toko'}</div>
+              <div style="color: #6b7280; font-size: 12px;">${notaSettings.footer_text || 'Terima kasih atas kunjungan Anda!'}</div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Insert print content into body and show it
+      const tempDiv = document.createElement('div');
+      tempDiv.id = 'temp-print-container';
+      tempDiv.innerHTML = printContent;
+      tempDiv.style.position = 'fixed';
+      tempDiv.style.top = '0';
+      tempDiv.style.left = '0';
+      tempDiv.style.width = '100%';
+      tempDiv.style.height = '100%';
+      tempDiv.style.background = 'white';
+      tempDiv.style.zIndex = '99999';
+      tempDiv.style.overflow = 'auto';
+      
+      // Add print button
+      const printBtn = document.createElement('button');
+      printBtn.innerHTML = '🖨️ CETAK NOTA';
+      printBtn.style.cssText = 'position: fixed; bottom: 20px; right: 20px; padding: 15px 30px; background: #d97706; color: white; border: none; font-size: 16px; font-weight: bold; cursor: pointer; border-radius: 8px; z-index: 100000; box-shadow: 0 2px 10px rgba(0,0,0,0.2);';
+      printBtn.onclick = () => {
+        window.print();
+      };
+      tempDiv.appendChild(printBtn);
+      
+      // Add close button
+      const closeBtn = document.createElement('button');
+      closeBtn.innerHTML = '✕ Tutup';
+      closeBtn.style.cssText = 'position: fixed; bottom: 20px; left: 20px; padding: 15px 30px; background: #6b7280; color: white; border: none; font-size: 16px; font-weight: bold; cursor: pointer; border-radius: 8px; z-index: 100000; box-shadow: 0 2px 10px rgba(0,0,0,0.2);';
+      closeBtn.onclick = () => {
+        document.body.removeChild(tempDiv);
+      };
+      tempDiv.appendChild(closeBtn);
+      
+      document.body.appendChild(tempDiv);
+      
+      // Try to auto-print
+      setTimeout(() => {
+        try {
+          window.print();
+        } catch(e) {
+          console.log('Auto-print failed:', e);
+        }
+      }, 500);
+      
+      return;
+    }
+    
+    // For non-Android devices, use the new window approach
     const printWindow = window.open('', '_blank', 'width=400,height=600');
+    
+    if (!printWindow) {
+      alert('Popup diblokir! Mohon izinkan popup untuk mencetak nota.');
+      return;
+    }
     
     const totalWithTax = notaSettings.tax_rate > 0 
       ? showReceipt.total_amount + calculateTax(showReceipt.total_amount, notaSettings.tax_rate)
@@ -639,6 +771,8 @@ const handlePrintAllTodaySales = async () => {
       <html>
       <head>
         <title>Nota - ${showReceipt.order_number}</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
           body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -729,8 +863,25 @@ const handlePrintAllTodaySales = async () => {
             color: #6b7280;
             font-size: 12px;
           }
+          .print-btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            background: #d97706;
+            color: white;
+            border: none;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            border-radius: 8px;
+          }
+          .print-btn:hover {
+            background: #b45309;
+          }
           @media print {
             body { margin: 0; padding: 10px; }
+            .print-btn { display: none !important; }
           }
         </style>
       </head>
@@ -769,12 +920,23 @@ const handlePrintAllTodaySales = async () => {
           <div class="footer-message">${notaSettings.footer_text || 'Terima kasih atas kunjungan Anda!'}</div>
         </div>
 
+        <button class="print-btn" onclick="window.print()">🖨️ CETAK NOTA</button>
+        
         <script>
           window.onload = function() {
-            window.print();
-            window.onafterprint = function() {
-              window.close();
-            };
+            setTimeout(function() {
+              try {
+                window.print();
+              } catch(e) {
+                console.log('Auto-print failed:', e);
+              }
+            }, 500);
+          };
+          
+          window.onafterprint = function() {
+            if (window.opener) {
+              window.opener.postMessage({ type: 'print-completed' }, '*');
+            }
           };
         </script>
       </body>
