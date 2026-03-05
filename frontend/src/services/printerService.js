@@ -49,11 +49,14 @@ class PrinterService {
 
     try {
       // Request device with common thermal printer services
+      // Including Rongta RP58BU specific UUIDs
       const device = await navigator.bluetooth.requestDevice({
         acceptAllDevices: true,
         optionalServices: [
           '0000ff00-0000-1000-8000-00805f9b34fb', // Common thermal printer SPP
           '0000fee7-0000-1000-8000-00805f9b34fb', // Another common UUID
+          '0000ffe0-0000-1000-8000-00805f9b34fb', // Rongta RP58BU service
+          '0000ffe1-0000-1000-8000-00805f9b34fb', // Rongta RP58BU characteristic
           '49535343-fe7d-4ae5-8fa9-9f9d9712ce446', // Serial Port Profile
         ]
       });
@@ -149,7 +152,12 @@ class PrinterService {
       try {
         const device = await navigator.bluetooth.requestDevice({
           acceptAllDevices: true,
-          optionalServices: ['0000ff00-0000-1000-8000-00805f9b34fb']
+          optionalServices: [
+            '0000ff00-0000-1000-8000-00805f9b34fb',
+            '0000fee7-0000-1000-8000-00805f9b34fb',
+            '0000ffe0-0000-1000-8000-00805f9b34fb', // Rongta RP58BU
+            '0000ffe1-0000-1000-8000-00805f9b34fb', // Rongta RP58BU
+          ]
         });
         this.device = device;
       } catch (e) {
