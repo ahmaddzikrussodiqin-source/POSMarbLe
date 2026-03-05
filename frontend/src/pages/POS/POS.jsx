@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { categoriesAPI, productsAPI, ordersAPI, notaAPI } from '../../services/api';
-import printerService, { PrinterService } from '../../services/printerService';
+import printerService, { PRINTER_COMMANDS } from '../../services/printerService';
 import { useNavigate } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
@@ -249,17 +249,17 @@ const handlePrintAllTodaySales = async () => {
 
         const WIDTH = 32;
         let printData = '';
-        printData += PrinterService.COMMANDS.INIT;
-        printData += PrinterService.COMMANDS.ALIGN_CENTER;
-        printData += PrinterService.COMMANDS.BOLD_ON;
+        printData += PRINTER_COMMANDS.INIT;
+        printData += PRINTER_COMMANDS.ALIGN_CENTER;
+        printData += PRINTER_COMMANDS.BOLD_ON;
         printData += 'LAPORAN PENJUALAN HARI INI\n';
-        printData += PrinterService.COMMANDS.BOLD_OFF;
+        printData += PRINTER_COMMANDS.BOLD_OFF;
         
         const today = new Date().toLocaleDateString('id-ID', { 
           weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
         });
         printData += today + '\n';
-        printData += PrinterService.COMMANDS.ALIGN_LEFT;
+        printData += PRINTER_COMMANDS.ALIGN_LEFT;
         printData += '-'.repeat(WIDTH) + '\n';
         
         printData += `Transaksi: ${todaySales.length}\n`;
@@ -276,13 +276,13 @@ const handlePrintAllTodaySales = async () => {
         });
         
         printData += '-'.repeat(WIDTH) + '\n';
-        printData += PrinterService.COMMANDS.BOLD_ON;
+        printData += PRINTER_COMMANDS.BOLD_ON;
         printData += 'TOTAL: ' + new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalAmount) + '\n';
-        printData += PrinterService.COMMANDS.BOLD_OFF;
+        printData += PRINTER_COMMANDS.BOLD_OFF;
         
         printData += '\n' + (notaSettings.footer_text || 'Terima kasih') + '\n';
-        printData += PrinterService.COMMANDS.FEED_LINES(3);
-        printData += PrinterService.COMMANDS.CUT_PARTIAL;
+        printData += PRINTER_COMMANDS.FEED_LINES(3);
+        printData += PRINTER_COMMANDS.CUT_PARTIAL;
         
         await printerService.sendData(printData);
         alert('Laporan berhasil dicetak ke printer Bluetooth');
