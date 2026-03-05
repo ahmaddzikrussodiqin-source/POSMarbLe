@@ -34,30 +34,21 @@ const POS = () => {
   const [printerConnected, setPrinterConnected] = useState(false);
   
   // Check if running on Android platform (Capacitor Android app)
-  // Using multiple detection methods for reliability
   const isAndroid = (() => {
     try {
-      // Method 1: Check user agent for Android (most reliable in WebView)
       if (typeof navigator !== 'undefined' && navigator.userAgent) {
         const ua = navigator.userAgent.toLowerCase();
-        // Check for Android in user agent
         if (ua.includes('android') || ua.includes('linux; u; android')) {
           return true;
         }
       }
-      
-      // Method 2: Check Capacitor platform
       const platform = Capacitor.getPlatform();
       if (platform === 'android') {
         return true;
       }
-      
-      // Method 3: Check if Capacitor is native platform
       if (Capacitor.isNativePlatform()) {
         return true;
       }
-      
-      // Method 4: Check for Capacitor object in window
       if (typeof window !== 'undefined' && window.Capacitor) {
         const cap = window.Capacitor;
         if (cap.getPlatform && cap.getPlatform() === 'android') {
@@ -73,12 +64,10 @@ const POS = () => {
     return false;
   })();
 
-  // Debug: log platform info
   console.log('Platform detection - isAndroid:', isAndroid, 'Capacitor platform:', Capacitor.getPlatform());
 
   // Handle hardware back button on Android
   const handleBackButton = useCallback(() => {
-    // Close any open modal in order of priority
     if (showTodaySalesModal) {
       setShowTodaySalesModal(false);
       return;
@@ -98,7 +87,6 @@ const POS = () => {
   }, [showTodaySalesModal, showReceipt, showMenuModal, selectedProduct]);
 
   useEffect(() => {
-    // Add hardware back button listener for Android
     if (isAndroid && CapacitorApp) {
       const removeListener = CapacitorApp.addListener('backButton', handleBackButton);
       return () => {
@@ -106,23 +94,6 @@ const POS = () => {
       };
     }
   }, [isAndroid, handleBackButton]);
-
-  // Handle print completed from browser (for WebView)
-  const handlePrintComplete = () => {
-    setShowReceipt(null);
-  };
-
-  // Listen for print completed messages from browser print window
-  useEffect(() => {
-    const handlePrintMessage = (event) => {
-      if (event.data && event.data.type === 'print-completed') {
-        handlePrintComplete();
-      }
-    };
-    
-    window.addEventListener('message', handlePrintMessage);
-    return () => window.removeEventListener('message', handlePrintMessage);
-  }, []);
 
   // Handle browser back button (fallback for hybrid apps)
   useEffect(() => {
@@ -160,18 +131,12 @@ const POS = () => {
     loadNotaSettings();
   }, []);
 
-// Check Bluetooth support and load saved printer
+  // Check Bluetooth support and load saved printer
   useEffect(() => {
-    // Check if Bluetooth is actually supported
     const btSupported = printerService.isBluetoothSupported();
     setBluetoothSupported(btSupported);
     console.log('Bluetooth supported:', btSupported);
     
-    if (!btSupported) {
-      console.log('Web Bluetooth not available. User will need to use browser print.');
-    }
-    
-    // Try to load saved printer from localStorage
     const savedPrinter = localStorage.getItem('selectedPrinter');
     if (savedPrinter) {
       try {
@@ -192,6 +157,33 @@ const POS = () => {
     }
   };
 
+  const loadData = async () => {
+    try {
+      const [categoriesRes, productsRes] = await Promise.all([
+        categoriesAPI.getAll(),
+        productsAPI.getAll({ available: true }),
+      ]);
+      setCategories(categoriesRes.data);
+      setProducts(productsRes.data);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatCurrency = (amount, currency = 'IDR') => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  const calculateTax = (amount, taxRate) => {
+    return Math.round(amount * (taxRate / 100));
+  };
+
   // Printer handlers
   const handleConnectPrinter = async () => {
     setConnectingPrinter(true);
@@ -199,7 +191,6 @@ const POS = () => {
       const result = await printerService.connectToPrinter();
       setSelectedPrinter(result);
       setPrinterConnected(true);
-      // Save to localStorage
       localStorage.setItem('selectedPrinter', JSON.stringify(result));
       alert('Printer terhubung: ' + result.name);
     } catch (error) {
@@ -218,290 +209,6 @@ const POS = () => {
       localStorage.removeItem('selectedPrinter');
     } catch (error) {
       console.error('Error disconnecting printer:', error);
-    }
-  };
-
-  const handlePrintWithPrinter = async (receiptData) => {
-    if (printerConnected && selectedPrinter) {
-      try {
-        await printerService.printReceipt(receiptData);
-        return true;
-      } catch (error) {
-        console.error('Error printing to Bluetooth printer:', error);
-        alert('Gagal cetak ke printer Bluetooth, akan menggunakan browser print');
-        return false;
-      }
-    }
-    return false;
-  };
-
-  const loadTodaySales = async () => {
-    setLoadingTodaySales(true);
-    try {
-      const res = await ordersAPI.getToday();
-      setTodaySales(res.data);
-    } catch (error) {
-      console.error('Error loading today sales:', error);
-      alert('Gagal memuat penjualan hari ini');
-    } finally {
-      setLoadingTodaySales(false);
-    }
-  };
-
-  const handlePrintTodaySales = async () => {
-    await loadTodaySales();
-    setShowTodaySalesModal(true);
-  };
-
-  const handlePrintAllTodaySales = async () => {
-    if (todaySales.length === 0) return;
-
-    // Try Bluetooth printing first if connected
-    if (printerConnected && selectedPrinter) {
-      try {
-        // Format data for printer
-        let totalAmount = 0;
-        let totalItems = 0;
-        todaySales.forEach(order => {
-          totalAmount += order.total_amount;
-          order.items.forEach(item => {
-            totalItems += item.quantity;
-          });
-        });
-
-        const WIDTH = 32;
-        let printData = '';
-        printData += PRINTER_COMMANDS.INIT;
-        printData += PRINTER_COMMANDS.ALIGN_CENTER;
-        printData += PRINTER_COMMANDS.BOLD_ON;
-        printData += 'LAPORAN PENJUALAN HARI INI\n';
-        printData += PRINTER_COMMANDS.BOLD_OFF;
-        
-        const today = new Date().toLocaleDateString('id-ID', { 
-          weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
-        });
-        printData += today + '\n';
-        printData += PRINTER_COMMANDS.ALIGN_LEFT;
-        printData += '-'.repeat(WIDTH) + '\n';
-        
-        printData += `Transaksi: ${todaySales.length}\n`;
-        printData += `Item Terjual: ${totalItems}\n`;
-        printData += '-'.repeat(WIDTH) + '\n';
-        
-        // Print each order
-        todaySales.forEach(order => {
-          printData += `${order.order_number} - ${new Date(order.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}\n`;
-          order.items.forEach(item => {
-            printData += `  ${item.product_name} x${item.quantity}\n`;
-          });
-          printData += `  TOTAL: ${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(order.total_amount)}\n\n`;
-        });
-        
-        printData += '-'.repeat(WIDTH) + '\n';
-        printData += PRINTER_COMMANDS.BOLD_ON;
-        printData += 'TOTAL: ' + new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalAmount) + '\n';
-        printData += PRINTER_COMMANDS.BOLD_OFF;
-        
-        printData += '\n' + (notaSettings.footer_text || 'Terima kasih') + '\n';
-        printData += PRINTER_COMMANDS.FEED_LINES(3);
-        printData += PRINTER_COMMANDS.CUT_PARTIAL;
-        
-        await printerService.sendData(printData);
-        alert('Laporan berhasil dicetak ke printer Bluetooth');
-        return;
-      } catch (error) {
-        console.error('Bluetooth print failed:', error);
-        alert('Gagal cetak ke printer Bluetooth, akan membuka dialog print browser');
-        // Fall through to browser print
-      }
-    }
-
-    // Browser print (original implementation)
-    const printWindow = window.open('', '_blank', 'width=400,height=600');
-    
-    // Calculate totals
-    let totalAmount = 0;
-    let totalItems = 0;
-    todaySales.forEach(order => {
-      totalAmount += order.total_amount;
-      order.items.forEach(item => {
-        totalItems += item.quantity;
-      });
-    });
-
-    const ordersHtml = todaySales.map(order => {
-      const itemsList = order.items.map(item => `
-        <tr>
-          <td style="padding: 2px 0; font-size: 11px;">${item.product_name} x${item.quantity}</td>
-          <td style="text-align: right; padding: 2px 0; font-size: 11px;">${formatCurrency(item.subtotal, notaSettings.currency)}</td>
-        </tr>
-      `).join('');
-      
-      return `
-        <div style="border-bottom: 1px dashed #e5e7eb; padding: 8px 0;">
-          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-            <span style="font-weight: bold; color: #d97706;">${order.order_number}</span>
-            <span style="font-size: 12px;">${new Date(order.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
-          </div>
-          <table style="width: 100%;">${itemsList}</table>
-          <div style="text-align: right; font-weight: bold; margin-top: 4px; color: #059669;">
-            Total: ${formatCurrency(order.total_amount, notaSettings.currency)}
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    const today = new Date().toLocaleDateString('id-ID', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    });
-
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Laporan Penjualan Hari Ini</title>
-        <style>
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            padding: 20px;
-            max-width: 300px;
-            margin: 0 auto;
-            color: #1f2937;
-          }
-          .header {
-            text-align: center;
-            padding-bottom: 15px;
-            border-bottom: 2px dashed #e5e7eb;
-            margin-bottom: 15px;
-          }
-          .logo {
-            font-size: 32px;
-            margin-bottom: 8px;
-          }
-          .shop-name {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 4px;
-          }
-          .date {
-            font-size: 12px;
-            color: #6b7280;
-            margin-top: 8px;
-          }
-          .summary {
-            background: #f9fafb;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-          }
-          .summary-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 4px;
-          }
-          .summary-label {
-            color: #6b7280;
-            font-size: 12px;
-          }
-          .summary-value {
-            font-weight: bold;
-            font-size: 14px;
-          }
-          .total-row {
-            border-top: 1px dashed #e5e7eb;
-            padding-top: 8px;
-            margin-top: 8px;
-          }
-          .total-label {
-            font-size: 14px;
-            font-weight: bold;
-          }
-          .total-value {
-            font-size: 18px;
-            font-weight: bold;
-            color: #059669;
-          }
-          .orders-title {
-            font-size: 14px;
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #374151;
-          }
-          .footer {
-            text-align: center;
-            margin-top: 20px;
-            padding-top: 12px;
-            border-top: 1px solid #f3f4f6;
-            font-size: 11px;
-            color: #6b7280;
-          }
-          @media print {
-            body { margin: 0; padding: 10px; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <div class="logo">${notaSettings.logo ? '<img src="' + notaSettings.logo + '" style="height: 40px;" />' : '🏪'}</div>
-          <div class="shop-name">${notaSettings.shop_name || 'Toko'}</div>
-          <div class="date">${today}</div>
-        </div>
-
-        <div class="summary">
-          <div class="summary-row">
-            <span class="summary-label">Jumlah Transaksi</span>
-            <span class="summary-value">${todaySales.length}</span>
-          </div>
-          <div class="summary-row">
-            <span class="summary-label">Total Item Terjual</span>
-            <span class="summary-value">${totalItems}</span>
-          </div>
-          <div class="summary-row total-row">
-            <span class="total-label">Total Pendapatan</span>
-            <span class="total-value">${formatCurrency(totalAmount, notaSettings.currency)}</span>
-          </div>
-        </div>
-
-        <div class="orders-title">Detail Transaksi</div>
-        <div class="orders">
-          ${ordersHtml}
-        </div>
-
-        <div class="footer">
-          <p>${notaSettings.footer_text || 'Terima kasih atas kunjungan Anda!'}</p>
-          <p style="margin-top: 4px;">Dicetak pada: ${new Date().toLocaleString('id-ID')}</p>
-        </div>
-
-        <script>
-          window.onload = function() {
-            window.print();
-            window.onafterprint = function() {
-              window.close();
-            };
-          };
-        </script>
-      </body>
-      </html>
-    `);
-    
-    printWindow.document.close();
-  };
-
-  const loadData = async () => {
-    try {
-      const [categoriesRes, productsRes] = await Promise.all([
-        categoriesAPI.getAll(),
-        productsAPI.getAll({ available: true }),
-      ]);
-      setCategories(categoriesRes.data);
-      setProducts(productsRes.data);
-    } catch (error) {
-      console.error('Error loading data:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -592,20 +299,7 @@ const POS = () => {
     }
   };
 
-  const formatCurrency = (amount, currency = 'IDR') => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  // Calculate tax amount
-  const calculateTax = (amount, taxRate) => {
-    return Math.round(amount * (taxRate / 100));
-  };
-
-  // Handle print receipt - Show print-friendly view in modal for Android
+  // Handle print receipt - using NativePrint for better Android compatibility
   const handlePrint = async () => {
     // First, try Bluetooth printing if connected
     if (printerConnected && selectedPrinter) {
@@ -618,225 +312,54 @@ const POS = () => {
         };
         await printerService.printReceipt(receiptData);
         
-        // Print successful with Bluetooth - close modal and return to POS
         alert('Nota berhasil dicetak!');
         setShowReceipt(null);
         return;
       } catch (error) {
         console.error('Bluetooth print failed:', error);
         alert('Gagal cetak ke printer Bluetooth');
-        // Continue to show print-friendly view
       }
     }
     
-    // For Android WebView, we need to show the print dialog differently
-    // Create a printable iframe that will trigger the print dialog
+    // Use NativePrint for better Android WebView compatibility
     try {
-      // Try using print API directly - works better in some WebViews
-      const printContent = document.createElement('iframe');
-      printContent.style.position = 'fixed';
-      printContent.style.right = '0';
-      printContent.style.bottom = '0';
-      printContent.style.width = '0';
-      printContent.style.height = '0';
-      printContent.style.border = '0';
-      
-      const totalWithTax = notaSettings.tax_rate > 0 
-        ? showReceipt.total_amount + calculateTax(showReceipt.total_amount, notaSettings.tax_rate)
-        : showReceipt.total_amount;
-      
-      const itemsHtml = showReceipt.items.map(item => `
-        <tr>
-          <td style="padding: 4px 0;">
-            <div style="font-weight: 500;">${item.product_name}</div>
-            <div style="color: #6b7280; font-size: 12px;">x${item.quantity}</div>
-          </td>
-          <td style="text-align: right; padding: 4px 0;">${formatCurrency(item.subtotal, notaSettings.currency)}</td>
-        </tr>
-      `).join('');
-
-      const taxHtml = notaSettings.tax_rate > 0 ? `
-        <tr>
-          <td style="padding: 4px 0; color: #6b7280;">Pajak (${notaSettings.tax_rate}%)</td>
-          <td style="text-align: right; padding: 4px 0;">${formatCurrency(calculateTax(showReceipt.total_amount, notaSettings.tax_rate), notaSettings.currency)}</td>
-        </tr>
-      ` : '';
-      
-      const htmlContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Nota - ${showReceipt.order_number}</title>
-          <style>
-            @page { margin: 0; }
-            body { 
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-              padding: 10px; 
-              margin: 0;
-              width: 58mm;
-              font-size: 12px;
-            }
-            .header { text-align: center; padding-bottom: 10px; border-bottom: 1px dashed #000; margin-bottom: 10px; }
-            .logo { font-size: 24px; margin-bottom: 5px; }
-            .shop-name { font-size: 14px; font-weight: bold; }
-            .order-number { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #000; }
-            .order-number-value { font-size: 16px; font-weight: bold; color: #d97706; }
-            table { width: 100%; border-collapse: collapse; font-size: 11px; }
-            .total-row { font-weight: bold; font-size: 14px; }
-            .payment-method { background: #f0f0f0; padding: 8px; text-align: center; margin-top: 10px; }
-            .footer { text-align: center; margin-top: 15px; padding-top: 10px; border-top: 1px dashed #000; }
-            @media print {
-              body { width: 58mm !important; margin: 0 !important; padding: 5mm !important; }
-              .no-print { display: none !important; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div class="logo">${notaSettings.logo ? '<img src="' + notaSettings.logo + '" style="height: 30px;" />' : '🏪'}</div>
-            <div class="shop-name">${notaSettings.shop_name || 'Toko'}</div>
-            ${notaSettings.address ? `<div>${notaSettings.address}</div>` : ''}
-            ${notaSettings.phone ? `<div>Telp: ${notaSettings.phone}</div>` : ''}
-            <div class="order-number">
-              <div style="font-size: 10px; color: #666;">Nomor Pesanan</div>
-              <div class="order-number-value">${showReceipt.order_number}</div>
-            </div>
-          </div>
-          <table>
-            ${itemsHtml}
-            <tr><td colspan="2"><hr style="border: 0; border-top: 1px dashed #ccc;"></td></tr>
-            <tr>
-              <td>Subtotal</td>
-              <td style="text-align: right;">${formatCurrency(showReceipt.total_amount, notaSettings.currency)}</td>
-            </tr>
-            ${taxHtml}
-            <tr class="total-row">
-              <td>TOTAL</td>
-              <td style="text-align: right;">${formatCurrency(totalWithTax, notaSettings.currency)}</td>
-            </tr>
-          </table>
-          <div class="payment-method">
-            <div style="font-size: 10px; color: #666;">Metode Pembayaran</div>
-            <div style="font-weight: bold;">${showReceipt.payment_method === 'cash' ? 'Tunai' : showReceipt.payment_method === 'qris' ? 'QRIS' : 'Kartu Debit'}</div>
-          </div>
-          <div class="footer">
-            <div style="font-weight: bold; color: #d97706;">${notaSettings.shop_name || 'Toko'}</div>
-            <div style="font-size: 10px;">${notaSettings.footer_text || 'Terima kasih!'}</div>
-          </div>
-          <div class="no-print" style="text-align: center; margin-top: 20px; padding: 10px;">
-            <button onclick="window.print()" style="padding: 10px 20px; background: #d97706; color: white; border: none; border-radius: 5px; font-size: 14px; cursor: pointer;">🖨️ CETAK</button>
-            <p style="font-size: 10px; color: #666; margin-top: 10px;">Pilih printer thermal 58mm</p>
-          </div>
-        </body>
-        </html>
-      `;
-      
-      printContent.srcdoc = htmlContent;
-      document.body.appendChild(printContent);
-      
-      // Wait for iframe to load, then print
-      printContent.onload = () => {
-        try {
-          printContent.contentWindow.print();
-        } catch (e) {
-          console.log('Print error:', e);
-          // If iframe print fails, try showing the content in a new window
-          document.body.removeChild(printContent);
-          showPrintWindow(totalWithTax, itemsHtml, taxHtml);
-        }
+      const printData = {
+        notaSettings,
+        showReceipt,
+        calculateTax
       };
       
-      // Fallback: if onload doesn't fire, try after a delay
-      setTimeout(() => {
-        if (printContent.parentNode) {
-          try {
-            printContent.contentWindow.print();
-          } catch (e) {
-            console.log('Print timeout error:', e);
-            document.body.removeChild(printContent);
-            showPrintWindow(totalWithTax, itemsHtml, taxHtml);
-          }
-        }
-      }, 1000);
+      const htmlContent = NativePrint.generatePrintHTML(printData);
+      await NativePrint.print(htmlContent, 'Nota - ' + showReceipt.order_number);
       
     } catch (error) {
       console.error('Print error:', error);
-      // Fallback to new window
-      showPrintWindow(totalWithTax, itemsHtml, taxHtml);
+      alert('Gagal membuka dialog print: ' + error.message);
     }
   };
 
-  // Helper function to show print window (fallback)
-  const showPrintWindow = (totalWithTax, itemsHtml, taxHtml) => {
-    const printWindow = window.open('', '_blank', 'width=400,height=600');
-    
-    if (!printWindow) {
-      alert('Popup diblokir! Mohon izinkan popup untuk mencetak nota.');
-      return;
+  const loadTodaySales = async () => {
+    setLoadingTodaySales(true);
+    try {
+      const res = await ordersAPI.getToday();
+      setTodaySales(res.data);
+    } catch (error) {
+      console.error('Error loading today sales:', error);
+      alert('Gagal memuat penjualan hari ini');
+    } finally {
+      setLoadingTodaySales(false);
     }
-    
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Nota - ${showReceipt.order_number}</title>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; max-width: 300px; margin: 0 auto; color: #1f2937; }
-          .header { text-align: center; padding-bottom: 15px; border-bottom: 2px dashed #e5e7eb; margin-bottom: 15px; }
-          .shop-name { font-size: 18px; font-weight: bold; margin-bottom: 4px; }
-          .order-number { margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e5e7eb; }
-          .order-number-value { font-size: 20px; font-weight: bold; color: #d97706; }
-          table { width: 100%; border-collapse: collapse; }
-          .subtotal { padding: 8px 0; border-bottom: 1px solid #f3f4f6; }
-          .total-row { padding: 12px 0; }
-          .total-label { font-size: 16px; font-weight: bold; }
-          .total-value { font-size: 22px; font-weight: bold; color: #d97706; }
-          .payment-method { background: #f9fafb; padding: 12px; border-radius: 8px; text-align: center; margin-top: 16px; }
-          .footer { text-align: center; margin-top: 20px; padding-top: 12px; border-top: 1px solid #f3f4f6; }
-          .print-btn { display: block; width: 100%; padding: 15px; background: #d97706; color: white; border: none; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 20px; border-radius: 8px; }
-          @media print { body { margin: 0; padding: 10px; } .print-btn { display: none !important; } }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <div class="logo">${notaSettings.logo ? '<img src="' + notaSettings.logo + '" style="height: 40px;" />' : '🏪'}</div>
-          <div class="shop-name">${notaSettings.shop_name || 'Toko'}</div>
-          ${notaSettings.address ? `<div class="address">${notaSettings.address}</div>` : ''}
-          ${notaSettings.phone ? `<div class="phone">Telp: ${notaSettings.phone}</div>` : ''}
-          <div class="order-number">
-            <div class="order-number-label">Nomor Pesanan</div>
-            <div class="order-number-value">${showReceipt.order_number}</div>
-          </div>
-        </div>
-        <table>
-          ${itemsHtml}
-          <tr class="subtotal"><td style="padding: 8px 0;">Subtotal</td><td style="text-align: right;">${formatCurrency(showReceipt.total_amount, notaSettings.currency)}</td></tr>
-          ${taxHtml}
-          <tr class="total-row"><td class="total-label">Total</td><td class="total-value">${formatCurrency(totalWithTax, notaSettings.currency)}</td></tr>
-        </table>
-        <div class="payment-method">
-          <div class="payment-method-label">Metode Pembayaran</div>
-          <div class="payment-method-value">${showReceipt.payment_method === 'cash' ? 'Tunai' : showReceipt.payment_method === 'qris' ? 'QRIS' : 'Kartu Debit'}</div>
-        </div>
-        <div class="footer">
-          <div class="footer-shop">${notaSettings.shop_name || 'Toko'}</div>
-          <div class="footer-message">${notaSettings.footer_text || 'Terima kasih atas kunjungan Anda!'}</div>
-        </div>
-        <button class="print-btn" onclick="window.print()">🖨️ CETAK NOTA</button>
-        <script>window.onload = function() { setTimeout(function() { try { window.print(); } catch(e) { console.log('Auto-print failed:', e); } }, 500); };</script>
-      </body>
-      </html>
-    `);
-    printWindow.document.close();
+  };
+
+  const handlePrintTodaySales = async () => {
+    await loadTodaySales();
+    setShowTodaySalesModal(true);
   };
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 to-orange-100">
         <div className="text-2xl text-amber-700 font-semibold animate-pulse">Memuat...</div>
-      </div>
     );
   }
 
@@ -853,7 +376,6 @@ const POS = () => {
             <p className="text-xs text-gray-500">Point of Sale</p>
           </div>
           
-          {/* Printer Selection Button */}
           <button
             onClick={() => setShowPrinterModal(true)}
             className={`ml-3 flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all ${
@@ -914,7 +436,6 @@ const POS = () => {
       <div className="flex flex-1 overflow-hidden">
         {/* Products Section */}
         <div className="flex-1 p-6 overflow-auto">
-          {/* Search and Categories */}
           <div className="mb-6">
             <div className="relative mb-4">
               <input
@@ -929,7 +450,6 @@ const POS = () => {
               </svg>
             </div>
 
-            {/* Categories */}
             <div className="flex gap-3 overflow-x-auto pb-2">
               <button
                 onClick={() => setSelectedCategory(null)}
@@ -955,9 +475,7 @@ const POS = () => {
                 </button>
               ))}
             </div>
-          </div>
 
-          {/* Products Grid - Restaurant Menu Style */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
             {filteredProducts.map((product) => {
               const stockStatus = getStockStatus(product);
@@ -972,7 +490,6 @@ const POS = () => {
                     outOfStock ? 'opacity-60 cursor-not-allowed' : 'hover:-translate-y-1'
                   }`}
                 >
-                  {/* Product Image */}
                   <div className="relative h-36 bg-gray-100 overflow-hidden">
                     {product.image_url ? (
                       <img 
@@ -985,7 +502,6 @@ const POS = () => {
                         <span className="text-5xl">☕</span>
                       </div>
                     )}
-                    {/* Stock Badge */}
                     <div className={`absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-medium text-white ${stockStatus.color}`}>
                       {stockStatus.label}
                     </div>
@@ -995,8 +511,6 @@ const POS = () => {
                       </div>
                     )}
                   </div>
-                  
-                  {/* Product Info */}
                   <div className="p-3">
                     <h3 className="font-bold text-gray-800 mb-1 truncate">{product.name}</h3>
                     <p className="text-amber-600 font-bold text-lg">{formatCurrency(product.price)}</p>
@@ -1013,7 +527,6 @@ const POS = () => {
             </div>
           )}
 
-          {/* Menu Button - Below Products */}
           <div className="mt-8 flex justify-center">
             <button
               onClick={() => setShowMenuModal(true)}
@@ -1025,9 +538,8 @@ const POS = () => {
               Menu
             </button>
           </div>
-        </div>
 
-        {/* Cart Section - Modern POS Style */}
+        {/* Cart Section */}
         <div className="w-96 bg-white shadow-2xl flex flex-col">
           <div className="p-5 border-b bg-gradient-to-r from-amber-500 to-orange-500 text-white">
             <div className="flex justify-between items-center">
@@ -1038,10 +550,8 @@ const POS = () => {
               <div className="bg-white px-4 py-2 rounded-xl border-2 border-gray-200">
                 <span className="text-2xl font-bold" style={{color: '#000000'}}>{formatCurrency(cartTotal)}</span>
               </div>
-            </div>
           </div>
 
-          {/* Cart Items */}
           <div className="flex-1 overflow-auto p-4">
             {cart.length === 0 ? (
               <div className="text-center py-12">
@@ -1054,7 +564,6 @@ const POS = () => {
                 {cart.map((item) => (
                   <div key={item.id} className="bg-gradient-to-r from-gray-50 to-white p-3 rounded-xl shadow-sm border border-gray-100">
                     <div className="flex gap-3">
-                      {/* Thumbnail */}
                       <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                         {item.image_url ? (
                           <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
@@ -1062,13 +571,9 @@ const POS = () => {
                           <div className="w-full h-full flex items-center justify-center text-2xl">☕</div>
                         )}
                       </div>
-                      
-                      {/* Details */}
                       <div className="flex-1 min-w-0">
                         <h4 className="font-semibold text-gray-800 truncate">{item.name}</h4>
                         <p className="text-amber-600 font-medium text-sm">{formatCurrency(item.price)}</p>
-                        
-                        {/* Quantity Controls */}
                         <div className="flex items-center gap-2 mt-2">
                           <button
                             onClick={() => updateQuantity(item.id, item.quantity - 1)}
@@ -1088,9 +593,6 @@ const POS = () => {
                             </svg>
                           </button>
                         </div>
-                      </div>
-                      
-                      {/* Remove & Subtotal */}
                       <div className="flex flex-col items-end justify-between">
                         <button
                           onClick={() => removeFromCart(item.id)}
@@ -1102,16 +604,13 @@ const POS = () => {
                         </button>
                         <span className="font-bold text-gray-800">{formatCurrency(item.price * item.quantity)}</span>
                       </div>
-                    </div>
                   </div>
                 ))}
               </div>
             )}
           </div>
 
-          {/* Payment Section */}
           <div className="p-4 border-t bg-gray-50">
-            {/* Payment Method */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Metode Pembayaran
@@ -1136,7 +635,6 @@ const POS = () => {
                   </button>
                 ))}
               </div>
-            </div>
 
             <button
               onClick={handleCheckout}
@@ -1161,17 +659,14 @@ const POS = () => {
               )}
             </button>
           </div>
-        </div>
       </div>
 
-      {/* Product Quantity Modal - Fixed for Android with scrollable content */}
+      {/* Product Quantity Modal */}
       {selectedProduct && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
           <div className="bg-white rounded-t-3xl sm:rounded-3xl p-4 sm:p-6 max-w-sm w-full max-h-[85vh] sm:max-h-[90vh] overflow-y-auto shadow-2xl">
-            {/* Drag handle for mobile */}
             <div className="sm:hidden flex justify-center mb-2">
               <div className="w-12 h-1 bg-gray-300 rounded-full"></div>
-            </div>
             
             <div className="text-center mb-4 sm:mb-6">
               <div className="w-24 h-24 sm:w-32 sm:h-32 mx-auto rounded-2xl overflow-hidden bg-gray-100 mb-3 sm:mb-4">
@@ -1188,7 +683,6 @@ const POS = () => {
               </p>
             </div>
 
-            {/* Quantity Picker */}
             <div className="flex items-center justify-center gap-4 sm:gap-6 mb-4 sm:mb-6">
               <button
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
@@ -1224,15 +718,13 @@ const POS = () => {
                 Tambah ke Keranjang
               </button>
             </div>
-          </div>
         </div>
       )}
 
-      {/* Receipt Modal - Using Nota Settings from Admin - Fixed for Android with scrollable content */}
+      {/* Receipt Modal */}
       {showReceipt && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50">
           <div className="bg-white rounded-3xl p-0 max-w-md w-full shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
-            {/* Receipt Header - Success */}
             <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-4 sm:p-6 text-white text-center flex-shrink-0">
               <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3">
                 <span style={{color: '#16a34a', fontSize: '1.5rem', fontWeight: 'bold'}}>✓</span>
@@ -1241,11 +733,8 @@ const POS = () => {
               <p className="text-emerald-100 text-sm">Terima kasih telah berbelanja</p>
             </div>
 
-            {/* Receipt Body - Scrollable */}
             <div className="p-4 sm:p-6 overflow-y-auto flex-1">
-              {/* Shop Info from Nota Settings */}
               <div className="border-b-2 border-dashed border-gray-200 pb-4 mb-4">
-                {/* Logo */}
                 {notaSettings.show_logo && (
                   <div className="text-center mb-3">
                     {notaSettings.logo ? (
@@ -1255,34 +744,24 @@ const POS = () => {
                     )}
                   </div>
                 )}
-                
-                {/* Shop Name */}
                 <div className="text-center mb-2">
                   <h3 className="font-bold text-lg text-gray-800">{notaSettings.shop_name || 'Toko'}</h3>
                 </div>
-                
-                {/* Address */}
                 {notaSettings.address && (
                   <div className="text-center">
                     <p className="text-sm text-gray-600">{notaSettings.address}</p>
                   </div>
                 )}
-                
-                {/* Phone */}
                 {notaSettings.phone && (
                   <div className="text-center">
                     <p className="text-sm text-gray-600">Telp: {notaSettings.phone}</p>
                   </div>
                 )}
-                
-                {/* Order Number */}
                 <div className="text-center mt-4 pt-3 border-t border-dashed border-gray-200">
                   <p className="text-gray-500 text-xs">Nomor Pesanan</p>
                   <p className="font-bold text-lg sm:text-xl text-amber-700">{showReceipt.order_number}</p>
                 </div>
-              </div>
 
-              {/* Items - Scrollable if too many */}
               <div className="space-y-2 mb-4 max-h-40 overflow-y-auto">
                 {showReceipt.items.map((item, index) => (
                   <div key={index} className="flex justify-between text-gray-700 text-sm">
@@ -1295,13 +774,11 @@ const POS = () => {
                 ))}
               </div>
 
-              {/* Subtotal */}
               <div className="flex justify-between items-center py-2 border-b border-gray-100">
                 <span className="text-gray-600">Subtotal</span>
                 <span className="text-gray-700">{formatCurrency(showReceipt.total_amount, notaSettings.currency)}</span>
               </div>
               
-              {/* Tax - Dynamic based on nota settings */}
               {notaSettings.tax_rate > 0 && (
                 <div className="flex justify-between items-center py-2 border-b border-gray-100">
                   <span className="text-gray-600">Pajak ({notaSettings.tax_rate}%)</span>
@@ -1311,7 +788,6 @@ const POS = () => {
                 </div>
               )}
               
-              {/* Total */}
               <div className="flex justify-between items-center py-3">
                 <span className="text-lg font-bold text-gray-800">Total</span>
                 <div className="text-right">
@@ -1329,9 +805,7 @@ const POS = () => {
                     )}
                   </span>
                 </div>
-              </div>
 
-              {/* Payment Method */}
               <div className="bg-gray-50 rounded-xl p-3 text-center mt-4">
                 <p className="text-sm text-gray-500">Metode Pembayaran</p>
                 <p className="font-bold text-gray-800 capitalize">
@@ -1339,22 +813,11 @@ const POS = () => {
                 </p>
               </div>
 
-              {/* QR Code - Optional from nota settings */}
-              {notaSettings.show_qr_code && (
-                <div className="text-center py-3 mt-3 border-t border-dashed border-gray-200">
-                  <div className="text-3xl">📱</div>
-                  <p className="text-xs text-gray-500">Scan untuk pembayaran</p>
-                </div>
-              )}
-
-              {/* Footer Message - From nota settings */}
               <div className="text-center mt-6 pt-3 border-t border-gray-100">
                 <p className="text-amber-600 font-medium">{notaSettings.shop_name || 'Toko'}</p>
                 <p className="text-gray-500 text-sm">{notaSettings.footer_text || 'Terima kasih atas kunjungan Anda!'}</p>
               </div>
-            </div>
 
-            {/* Buttons - Always visible at bottom */}
             <div className="p-3 sm:p-4 bg-gray-50 flex gap-2 sm:gap-3 flex-shrink-0">
               <button
                 onClick={handlePrint}
@@ -1372,15 +835,13 @@ const POS = () => {
                 Selesai
               </button>
             </div>
-          </div>
         </div>
       )}
 
-      {/* Menu Modal - Information about POS Workflow */}
+      {/* Menu Modal */}
       {showMenuModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-3xl p-0 max-w-lg w-full shadow-2xl overflow-hidden">
-            {/* Menu Header */}
             <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-6 text-white">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-3">
@@ -1393,7 +854,6 @@ const POS = () => {
                     <h2 className="text-2xl font-bold">Menu</h2>
                     <p className="text-white text-sm opacity-90">Panduan Penggunaan POS</p>
                   </div>
-                </div>
                 <button
                   onClick={() => setShowMenuModal(false)}
                   className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center hover:bg-opacity-30 transition"
@@ -1403,71 +863,44 @@ const POS = () => {
                   </svg>
                 </button>
               </div>
-            </div>
 
-            {/* Menu Body - Workflow Steps */}
             <div className="p-6">
               <h3 className="text-lg font-bold text-gray-800 mb-4">Cara Menggunakan POS:</h3>
-              
               <div className="space-y-4">
-                {/* Step 1 */}
                 <div className="flex gap-4 items-start">
                   <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-amber-600 font-bold">1</span>
                   </div>
                   <div className="flex-1">
                     <h4 className="font-semibold text-gray-800">Pilih Produk</h4>
-                    <p className="text-gray-500 text-sm">Ketika ada pembeli, kasir memilih produk yang akan dibeli oleh pembeli dari daftar menu yang tersedia.</p>
+                    <p className="text-gray-500 text-sm">Pilih produk yang akan dibeli.</p>
                   </div>
-                </div>
-
-                {/* Step 2 */}
                 <div className="flex gap-4 items-start">
                   <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-orange-600 font-bold">2</span>
                   </div>
                   <div className="flex-1">
                     <h4 className="font-semibold text-gray-800">Tambah ke Keranjang</h4>
-                    <p className="text-gray-500 text-sm">Produk yang dipilih akan masuk ke keranjang. Kasir dapat mengatur jumlah produk sesuai pesanan.</p>
+                    <p className="text-gray-500 text-sm">Atur jumlah produk.</p>
                   </div>
-                </div>
-
-                {/* Step 3 */}
                 <div className="flex gap-4 items-start">
                   <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-red-600 font-bold">3</span>
                   </div>
                   <div className="flex-1">
                     <h4 className="font-semibold text-gray-800">Pembayaran</h4>
-                    <p className="text-gray-500 text-sm">Kasir memilih metode pembayaran (Tunai, QRIS, atau Debit) dan menyelesaikan pembayaran.</p>
+                    <p className="text-gray-500 text-sm">Pilih metode pembayaran.</p>
                   </div>
-                </div>
-
-                {/* Step 4 */}
                 <div className="flex gap-4 items-start">
                   <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-green-600 font-bold">4</span>
                   </div>
                   <div className="flex-1">
                     <h4 className="font-semibold text-gray-800">Cetak Nota</h4>
-                    <p className="text-gray-500 text-sm">Setelah pembayaran berhasil, sistem akan otomatis mencetak nota sebagai bukti transaksi.</p>
+                    <p className="text-gray-500 text-sm">Cetak nota sebagai bukti.</p>
                   </div>
-                </div>
               </div>
 
-              {/* Info Box */}
-              <div className="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
-                <div className="flex gap-3">
-                  <div className="text-2xl">💡</div>
-                  <div>
-                    <p className="text-blue-800 font-medium text-sm">Tips:</p>
-                    <p className="text-blue-600 text-sm">Gunakan fitur pencarian untuk menemukan produk dengan cepat.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Menu Footer */}
             <div className="p-4 bg-gray-50">
               <button
                 onClick={() => setShowMenuModal(false)}
@@ -1476,7 +909,6 @@ const POS = () => {
                 Mengerti
               </button>
             </div>
-          </div>
         </div>
       )}
 
@@ -1484,21 +916,13 @@ const POS = () => {
       {showTodaySalesModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-3xl p-0 max-w-2xl w-full shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
-            {/* Header */}
             <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-6 text-white flex-shrink-0">
               <div className="flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
-                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-bold">Penjualan Hari Ini</h2>
-                    <p className="text-white text-sm opacity-90">
-                      {new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                    </p>
-                  </div>
+                <div>
+                  <h2 className="text-2xl font-bold">Penjualan Hari Ini</h2>
+                  <p className="text-white text-sm opacity-90">
+                    {new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                  </p>
                 </div>
                 <button
                   onClick={() => setShowTodaySalesModal(false)}
@@ -1509,9 +933,7 @@ const POS = () => {
                   </svg>
                 </button>
               </div>
-            </div>
 
-            {/* Content */}
             <div className="p-6 flex-1 overflow-auto">
               {loadingTodaySales ? (
                 <div className="text-center py-8">
@@ -1525,7 +947,6 @@ const POS = () => {
                 </div>
               ) : (
                 <>
-                  {/* Summary Cards */}
                   <div className="grid grid-cols-3 gap-4 mb-6">
                     <div className="bg-blue-50 rounded-xl p-4 text-center">
                       <p className="text-blue-600 text-sm font-medium">Transaksi</p>
@@ -1543,58 +964,18 @@ const POS = () => {
                         {formatCurrency(todaySales.reduce((sum, order) => sum + order.total_amount, 0), notaSettings.currency)}
                       </p>
                     </div>
-                  </div>
-
-                  {/* Transactions List */}
-                  <h3 className="font-bold text-gray-800 mb-3">Detail Transaksi</h3>
-                  <div className="space-y-3 max-h-64 overflow-auto">
-                    {todaySales.map((order) => (
-                      <div key={order.id} className="bg-gray-50 rounded-xl p-4">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="font-bold text-amber-600">{order.order_number}</span>
-                          <span className="text-sm text-gray-500">
-                            {new Date(order.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
-                        <div className="space-y-1 mb-2">
-                          {order.items.map((item, idx) => (
-                            <div key={idx} className="flex justify-between text-sm">
-                              <span className="text-gray-600">{item.product_name} x{item.quantity}</span>
-                              <span className="text-gray-800">{formatCurrency(item.subtotal, notaSettings.currency)}</span>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="border-t pt-2 mt-2 flex justify-between">
-                          <span className="font-medium text-gray-700">Total</span>
-                          <span className="font-bold text-green-600">{formatCurrency(order.total_amount, notaSettings.currency)}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
                 </>
               )}
             </div>
 
-            {/* Footer */}
-            <div className="p-4 bg-gray-50 flex gap-3 flex-shrink-0">
-              <button
-                onClick={handlePrintAllTodaySales}
-                disabled={todaySales.length === 0 || loadingTodaySales}
-                className="flex-1 py-3 bg-white border-2 border-green-500 text-green-600 rounded-xl font-bold hover:bg-green-50 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                </svg>
-                Cetak Laporan
-              </button>
+            <div className="p-4 bg-gray-50 flex-shrink-0">
               <button
                 onClick={() => setShowTodaySalesModal(false)}
-                className="flex-1 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-bold hover:from-amber-600 hover:to-orange-600 transition"
+                className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-bold hover:from-amber-600 hover:to-orange-600 transition"
               >
                 Tutup
               </button>
             </div>
-          </div>
         </div>
       )}
 
@@ -1602,19 +983,11 @@ const POS = () => {
       {showPrinterModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-3xl p-0 max-w-sm w-full shadow-2xl overflow-hidden">
-            {/* Header */}
             <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-6 text-white">
               <div className="flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
-                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold">Pilih Printer</h2>
-                    <p className="text-white text-sm opacity-90">Koneksi Bluetooth</p>
-                  </div>
+                <div>
+                  <h2 className="text-xl font-bold">Pilih Printer</h2>
+                  <p className="text-white text-sm opacity-90">Koneksi Bluetooth</p>
                 </div>
                 <button
                   onClick={() => setShowPrinterModal(false)}
@@ -1625,24 +998,19 @@ const POS = () => {
                   </svg>
                 </button>
               </div>
-            </div>
 
-            {/* Content */}
             <div className="p-6">
-              {/* Bluetooth Status */}
               {!bluetoothSupported ? (
                 <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
                   <div className="flex gap-3">
                     <div className="text-2xl">⚠️</div>
                     <div>
                       <p className="text-red-800 font-medium text-sm">Bluetooth Tidak Didukung</p>
-                      <p className="text-red-600 text-xs">Silakan gunakan browser Chrome/Edge di Android</p>
+                      <p className="text-red-600 text-xs">Gunakan browser print untuk mencetak</p>
                     </div>
-                  </div>
                 </div>
               ) : (
                 <>
-                  {/* Current Printer Status */}
                   {printerConnected && selectedPrinter ? (
                     <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-4">
                       <div className="flex items-center justify-between">
@@ -1654,7 +1022,6 @@ const POS = () => {
                             <p className="text-green-800 font-medium text-sm">Printer Terhubung</p>
                             <p className="text-green-600 text-xs">{selectedPrinter.name}</p>
                           </div>
-                        </div>
                         <button
                           onClick={handleDisconnectPrinter}
                           className="text-red-500 hover:text-red-700 text-sm font-medium"
@@ -1662,21 +1029,8 @@ const POS = () => {
                           Putus
                         </button>
                       </div>
-                    </div>
-                  ) : selectedPrinter ? (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="text-2xl">⚡</div>
-                        <div className="flex-1">
-                          <p className="text-yellow-800 font-medium text-sm">Printer Tersimpan</p>
-                          <p className="text-yellow-600 text-xs">{selectedPrinter.name}</p>
-                        </div>
-                      </div>
-                      <p className="text-yellow-700 text-xs mt-2">Silakan hubungkan ulang printer</p>
-                    </div>
                   ) : null}
 
-                  {/* Connect Button */}
                   <button
                     onClick={handleConnectPrinter}
                     disabled={connectingPrinter}
@@ -1692,55 +1046,3 @@ const POS = () => {
                       </>
                     ) : (
                       <>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                        </svg>
-                        Scan & Hubungkan Printer
-                      </>
-                    )}
-                  </button>
-
-                  {/* Info Box */}
-                  <div className="mt-4 bg-gray-50 border border-gray-200 rounded-xl p-4">
-                    <div className="flex gap-3">
-                      <div className="text-2xl">💡</div>
-                      <div>
-                        <p className="text-gray-800 font-medium text-sm">Cara Menggunakan:</p>
-                        <ol className="text-gray-600 text-xs mt-1 list-decimal list-inside">
-                          <li>Klik tombol "Scan & Hubungkan Printer"</li>
-                          <li>Pilih printer thermal dari daftar</li>
-                          <li>Tunggu hingga terhubung</li>
-                          <li>Printer akan otomatis digunakan untuk cetak nota</li>
-                        </ol>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Browser Print Option */}
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <p className="text-gray-500 text-xs text-center">
-                      Atau gunakan print browser dengan memilih printer saat klik "Print" di nota
-                    </p>
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Footer */}
-            <div className="p-4 bg-gray-50">
-              <button
-                onClick={() => setShowPrinterModal(false)}
-                className="w-full py-3 bg-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-300 transition"
-              >
-                Tutup
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// Export default POS component
-export default POS;
