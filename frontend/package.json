@@ -12,6 +12,7 @@
   "dependencies": {
     "@capacitor/app": "^8.0.1",
     "@capacitor/core": "^8.1.0",
+    "@capacitor/splash-screen": "^8.0.1",
     "@tailwindcss/vite": "^4.2.0",
     "axios": "^1.13.5",
     "react": "^19.2.0",

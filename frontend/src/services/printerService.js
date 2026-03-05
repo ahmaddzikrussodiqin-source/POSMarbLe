@@ -1,218 +1,318 @@
-// Printer Service - Web Bluetooth API for thermal printers
-// Uses ESC/POS commands for compatibility with most thermal printers
+// Printer Service - Using Capacitor Bluetooth LE Plugin
+// More stable and reliable than Web Bluetooth API
+
+import { BluetoothLe } from '@capacitor-community/bluetooth-le';
 
 class PrinterService {
   constructor() {
-    this.device = null;
-    this.server = null;
-    this.printerService = null;
-    this.writeCharacteristic = null;
+    this.deviceId = null;
+    this.deviceName = null;
     this.isConnected = false;
+    this.isInitialized = false;
+    this.writeChar = null;
   }
 
-  // Check if Web Bluetooth is supported
-  isBluetoothSupported() {
-    return 'bluetooth' in navigator;
-  }
-
-  // Request Bluetooth device
-  async requestDevice() {
-    if (!this.isBluetoothSupported()) {
-      throw new Error('Bluetooth tidak didukung di browser ini. Silakan gunakan browser Chrome/Edge.');
-    }
-
+  // Initialize Bluetooth LE
+  async initialize() {
     try {
-      const device = await navigator.bluetooth.requestDevice({
-        // Accept all devices, then filter for printers
-        acceptAllDevices: true,
-        optionalServices: ['0000ff00-0000-1000-8000-00805f9b34fb'] // Common SPP service UUID
-      });
-
-      this.device = device;
-      console.log('Device selected:', device.name);
-      
-      device.addEventListener('gattserverdisconnected', () => {
-        this.isConnected = false;
-        console.log('Printer disconnected');
-      });
-
-      return device;
-    } catch (error) {
-      console.error('Error requesting device:', error);
-      throw error;
-    }
-  }
-
-  // Connect to the device
-  async connect() {
-    if (!this.device) {
-      throw new Error('Tidak ada perangkat yang dipilih');
-    }
-
-    try {
-      this.server = await this.device.gatt.connect();
-      this.isConnected = true;
-      console.log('Connected to GATT server');
+      await BluetoothLe.initialize();
+      this.isInitialized = true;
+      console.log('Bluetooth LE initialized');
       return true;
     } catch (error) {
-      console.error('Error connecting:', error);
-      throw error;
+      console.error('Error initializing Bluetooth:', error);
+      return false;
     }
   }
 
-  // Find and get the write characteristic
-  async findWriteService() {
-    if (!this.server) {
-      throw new Error('Belum terhubung ke server');
-    }
-
+  // Check if Bluetooth is supported
+  async isBluetoothSupported() {
     try {
-      // Try common service UUIDs for thermal printers
-      const serviceUUIDs = [
-        '0000ff00-0000-1000-8000-00805f9b34fb', // Common thermal printer SPP
-        '0000fee7-0000-1000-8000-00805f9b34fb', // Another common UUID
-        '00001800-0000-1000-8000-00805f9b34fb', // Generic Access
-        '00001801-0000-1000-8000-00805f9b34fb'  // Generic Attribute
-      ];
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+      const status = await BluetoothLe.getAdapterStatus();
+      return status.isSupported;
+    } catch (error) {
+      console.error('Bluetooth support check error:', error);
+      return false;
+    }
+  }
 
-      for (const serviceUUID of serviceUUIDs) {
-        try {
-          const service = await this.server.getPrimaryService(serviceUUID);
-          const characteristics = await service.getCharacteristics();
-          
-          for (const char of characteristics) {
-            // Look for writable characteristics
-            if (char.properties.write || char.properties.writeWithoutResponse) {
-              this.writeCharacteristic = char;
-              this.printerService = service;
-              console.log('Found write characteristic:', char.uuid);
-              return true;
-            }
-          }
-        } catch (e) {
-          continue;
+  // Check if Bluetooth is enabled
+  async isBluetoothEnabled() {
+    try {
+      const status = await BluetoothLe.getAdapterStatus();
+      return status.isEnabled;
+    } catch (error) {
+      console.error('Bluetooth enabled check error:', error);
+      return false;
+    }
+  }
+
+  // Request Bluetooth enable
+  async requestEnable() {
+    try {
+      await BluetoothLe.requestEnable();
+      return true;
+    } catch (error) {
+      console.error('Request enable error:', error);
+      return false;
+    }
+  }
+
+  // Request device permission (Android 12+)
+  async requestPermissions() {
+    try {
+      const result = await BluetoothLe.requestPermissions();
+      return result.bluetoothScan || result.bluetoothConnect ? true : false;
+    } catch (error) {
+      console.error('Request permissions error:', error);
+      return false;
+    }
+  }
+
+  // Scan for devices
+  async scanDevices() {
+    try {
+      await this.requestPermissions();
+      
+      const enabled = await this.isBluetoothEnabled();
+      if (!enabled) {
+        const requested = await this.requestEnable();
+        if (!requested) {
+          throw new Error('Bluetooth tidak diaktifkan');
         }
       }
 
-      throw new Error('Tidak dapat menemukan layanan printer yang kompatibel');
+      const devices = await BluetoothLe.requestDevice({
+        services: [],
+        allowDuplicates: false,
+      });
+      
+      return devices;
     } catch (error) {
-      console.error('Error finding service:', error);
+      console.error('Scan error:', error);
       throw error;
     }
   }
 
-  // Connect to a printer
-  async connectToPrinter() {
+  // Connect to device
+  async connect(deviceId) {
     try {
-      await this.requestDevice();
-      await this.connect();
-      await this.findWriteService();
-      return {
-        name: this.device.name || 'Printer Tidak Dikenal',
-        connected: true
-      };
-    } catch (error) {
-      console.error('Connection error:', error);
-      throw error;
-    }
-  }
-
-  // Disconnect from printer
-  async disconnect() {
-    if (this.device && this.device.gatt.connected) {
-      this.device.gatt.disconnect();
-    }
-    this.isConnected = false;
-    this.device = null;
-    this.server = null;
-    this.printerService = null;
-    this.writeCharacteristic = null;
-  }
-
-  // Send data to printer
-  async sendData(data) {
-    if (!this.writeCharacteristic) {
-      throw new Error('Printer belum terhubung dengan benar');
-    }
-
-    try {
-      const buffer = typeof data === 'string' ? this.stringToBuffer(data) : data;
-      await this.writeCharacteristic.writeValue(buffer);
+      await BluetoothLe.connect({ deviceId });
+      this.deviceId = deviceId;
+      this.isConnected = true;
+      console.log('Connected to device:', deviceId);
       return true;
     } catch (error) {
-      console.error('Error sending data:', error);
+      console.error('Connect error:', error);
       throw error;
     }
   }
 
-  // Convert string to ArrayBuffer
-  stringToBuffer(str) {
-    const buffer = new ArrayBuffer(str.length);
-    const view = new Uint8Array(buffer);
-    for (let i = 0; i < str.length; i++) {
-      view[i] = str.charCodeAt(i);
+  // Disconnect from device
+  async disconnect() {
+    try {
+      if (this.deviceId) {
+        await BluetoothLe.disconnect({ deviceId: this.deviceId });
+      }
+      this.deviceId = null;
+      this.deviceName = null;
+      this.isConnected = false;
+      this.writeChar = null;
+      console.log('Disconnected');
+    } catch (error) {
+      console.error('Disconnect error:', error);
     }
-    return buffer;
+  }
+
+  // Get services
+  async getServices() {
+    try {
+      const services = await BluetoothLe.getServices({ deviceId: this.deviceId });
+      return services;
+    } catch (error) {
+      console.error('Get services error:', error);
+      throw error;
+    }
+  }
+
+  // Get characteristics for a service
+  async getCharacteristics(serviceUUID) {
+    try {
+      const characteristics = await BluetoothLe.getCharacteristics({
+        deviceId: this.deviceId,
+        service: serviceUUID,
+      });
+      return characteristics;
+    } catch (error) {
+      console.error('Get characteristics error:', error);
+      throw error;
+    }
+  }
+
+  // Write data to characteristic
+  async writeData(serviceUUID, characteristicUUID, data) {
+    try {
+      await BluetoothLe.write({
+        deviceId: this.deviceId,
+        service: serviceUUID,
+        characteristic: characteristicUUID,
+        value: this.arrayBufferToBase64(data),
+      });
+      return true;
+    } catch (error) {
+      console.error('Write error:', error);
+      throw error;
+    }
+  }
+
+  // Find write characteristic in a service
+  async findWriteCharacteristic(serviceUUID) {
+    try {
+      const characteristics = await this.getCharacteristics(serviceUUID);
+      
+      for (const char of characteristics) {
+        if (char.properties.write || char.properties.writeWithoutResponse) {
+          return {
+            uuid: char.uuid,
+            write: char.properties.write,
+            writeWithoutResponse: char.properties.writeWithoutResponse,
+          };
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Find write characteristic error:', error);
+      return null;
+    }
+  }
+
+  // Common thermal printer service UUIDs
+  static get PRINTER_SERVICE_UUIDS() {
+    return [
+      '0000ff00-0000-1000-8000-00805f9b34fb',
+      '0000fee7-0000-1000-8000-00805f9b34fb',
+      '49535343-fe7d-4ae5-8fa9-9f9d9712ce446',
+    ];
+  }
+
+  // Connect to printer with auto-discovery
+  async connectToPrinter() {
+    try {
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+
+      const device = await this.scanDevices();
+      
+      if (!device || !device.deviceId) {
+        throw new Error('Tidak ada perangkat yang dipilih');
+      }
+
+      this.deviceName = device.name || 'Printer Tidak Dikenal';
+
+      await this.connect(device.deviceId);
+
+      const services = await this.getServices();
+      
+      let writeChar = null;
+      
+      for (const serviceUUID of PrinterService.PRINTER_SERVICE_UUIDS) {
+        const char = await this.findWriteCharacteristic(serviceUUID);
+        if (char) {
+          writeChar = { service: serviceUUID, ...char };
+          break;
+        }
+      }
+
+      if (!writeChar && services && services.length > 0) {
+        for (const service of services) {
+          const char = await this.findWriteCharacteristic(service.uuid);
+          if (char) {
+            writeChar = { service: service.uuid, ...char };
+            break;
+          }
+        }
+      }
+
+      if (!writeChar) {
+        throw new Error('Tidak dapat menemukan karakteristik yang dapat ditulis');
+      }
+
+      this.writeChar = writeChar;
+
+      return {
+        name: this.deviceName,
+        connected: true,
+        deviceId: this.deviceId,
+      };
+    } catch (error) {
+      console.error('Connect to printer error:', error);
+      await this.disconnect();
+      throw error;
+    }
   }
 
   // ESC/POS Commands
   static get COMMANDS() {
     return {
-      // Initialize printer
       INIT: '\x1b\x40',
-      
-      // Line feed
       LF: '\x0a',
       CR: '\x0d',
-      
-      // Bold
       BOLD_ON: '\x1b\x45\x01',
       BOLD_OFF: '\x1b\x45\x00',
-      
-      // Underline
       UNDERLINE_ON: '\x1b\x2d\x01',
       UNDERLINE_OFF: '\x1b\x2d\x00',
-      
-      // Text alignment
       ALIGN_LEFT: '\x1b\x61\x00',
       ALIGN_CENTER: '\x1b\x61\x01',
       ALIGN_RIGHT: '\x1b\x61\x02',
-      
-      // Font size
       FONT_NORMAL: '\x1d\x21\x00',
       FONT_LARGE: '\x1d\x21\x01',
       FONT_LARGE2: '\x1d\x21\x11',
-      
-      // Cut paper
       CUT_PARTIAL: '\x1d\x56\x01',
       CUT_FULL: '\x1d\x56\x00',
-      
-      // Open cash drawer
       OPEN_DRAWER: '\x1b\x70\x00\x19\xfa',
-      
-      // Feed lines
       FEED_LINES: (n) => '\x1b\x64' + String.fromCharCode(n),
     };
   }
 
+  // Convert ArrayBuffer to Base64
+  arrayBufferToBase64(buffer) {
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+  }
+
+  // Convert string to Uint8Array
+  stringToUint8Array(str) {
+    const arr = new Uint8Array(str.length);
+    for (let i = 0; i < str.length; i++) {
+      arr[i] = str.charCodeAt(i);
+    }
+    return arr;
+  }
+
   // Format receipt text for thermal printer
   formatReceiptForPrinter(receiptData) {
-    const { notaSettings, showReceipt, paymentMethod, calculateTax } = receiptData;
-    const WIDTH = 32; // Standard thermal printer width
+    const { notaSettings, showReceipt, calculateTax } = receiptData;
+    const WIDTH = 32;
     
     let printData = '';
     
-    // Initialize
     printData += PrinterService.COMMANDS.INIT;
     printData += PrinterService.COMMANDS.FONT_NORMAL;
     printData += PrinterService.COMMANDS.ALIGN_CENTER;
     
-    // Shop name
     printData += PrinterService.COMMANDS.BOLD_ON;
     printData += this.centerText(notaSettings.shop_name || 'Toko', WIDTH) + '\n';
     printData += PrinterService.COMMANDS.BOLD_OFF;
     
-    // Address and phone
     if (notaSettings.address) {
       printData += this.centerText(notaSettings.address, WIDTH) + '\n';
     }
@@ -220,38 +320,29 @@ class PrinterService {
       printData += this.centerText('Telp: ' + notaSettings.phone, WIDTH) + '\n';
     }
     
-    // Divider
     printData += this.repeatChar('-', WIDTH) + '\n';
     
-    // Order number
     printData += PrinterService.COMMANDS.ALIGN_LEFT;
     printData += 'No. Pesanan: ' + showReceipt.order_number + '\n';
     printData += this.repeatChar('-', WIDTH) + '\n';
     
-    // Items
     printData += PrinterService.COMMANDS.ALIGN_LEFT;
     showReceipt.items.forEach(item => {
-      const itemLine = `${item.product_name}`;
-      const qtyLine = `x${item.quantity}`;
-      const priceLine = this.formatMoney(item.subtotal);
-      printData += this.padBoth(itemLine, WIDTH - 12) + priceLine + '\n';
+      printData += `${item.product_name}\n`;
+      printData += `x${item.quantity}  ${this.formatMoney(item.subtotal)}\n`;
     });
     
-    // Divider
     printData += this.repeatChar('-', WIDTH) + '\n';
     
-    // Subtotal
     const subtotalStr = 'Subtotal';
     printData += subtotalStr + this.padLeft(this.formatMoney(showReceipt.total_amount), WIDTH - subtotalStr.length) + '\n';
     
-    // Tax
     if (notaSettings.tax_rate > 0) {
       const taxAmount = calculateTax(showReceipt.total_amount, notaSettings.tax_rate);
       const taxStr = `Pajak (${notaSettings.tax_rate}%)`;
       printData += taxStr + this.padLeft(this.formatMoney(taxAmount), WIDTH - taxStr.length) + '\n';
     }
     
-    // Total
     const totalWithTax = notaSettings.tax_rate > 0 
       ? showReceipt.total_amount + calculateTax(showReceipt.total_amount, notaSettings.tax_rate)
       : showReceipt.total_amount;
@@ -261,19 +352,16 @@ class PrinterService {
     printData += totalStr + this.padLeft(this.formatMoney(totalWithTax), WIDTH - totalStr.length) + '\n';
     printData += PrinterService.COMMANDS.BOLD_OFF;
     
-    // Payment method
     printData += this.repeatChar('-', WIDTH) + '\n';
     const methodName = showReceipt.payment_method === 'cash' ? 'Tunai' : 
                       showReceipt.payment_method === 'qris' ? 'QRIS' : 'Kartu Debit';
     printData += 'Pembayaran: ' + methodName + '\n';
     
-    // Footer
     printData += '\n';
     printData += PrinterService.COMMANDS.ALIGN_CENTER;
     printData += notaSettings.shop_name || 'Toko' + '\n';
     printData += notaSettings.footer_text || 'Terima kasih' + '\n';
     
-    // Feed and cut
     printData += '\n\n';
     printData += PrinterService.COMMANDS.FEED_LINES(3);
     printData += PrinterService.COMMANDS.CUT_PARTIAL;
@@ -281,55 +369,58 @@ class PrinterService {
     return printData;
   }
 
-  // Helper: Center text
+  // Helper functions
   centerText(text, width) {
-    const padding = Math.floor((width - this.stripAnsi(text).length) / 2);
+    const padding = Math.floor((width - text.length) / 2);
     return ' '.repeat(Math.max(0, padding)) + text;
   }
 
-  // Helper: Pad left
   padLeft(text, width) {
-    const padding = Math.max(0, width - this.stripAnsi(text).length);
+    const padding = Math.max(0, width - text.length);
     return ' '.repeat(padding) + text;
   }
 
-  // Helper: Pad both
-  padBoth(text, width) {
-    const stripped = this.stripAnsi(text);
-    const padding = Math.max(0, width - stripped.length);
-    const left = Math.floor(padding / 2);
-    const right = padding - left;
-    return ' '.repeat(left) + text + ' '.repeat(right);
-  }
-
-  // Helper: Repeat character
   repeatChar(char, count) {
     return char.repeat(count);
   }
 
-  // Helper: Format money
   formatMoney(amount) {
-    return 'Rp ' + new Intl.NumberFormat('id-ID').format(amount);
-  }
-
-  // Helper: Strip ANSI codes (simplified)
-  stripAnsi(str) {
-    return str.replace(/\x1b\[[0-9;]*m/g, '');
+    return 'Rp' + new Intl.NumberFormat('id-ID').format(amount);
   }
 
   // Print receipt directly to Bluetooth printer
   async printReceipt(receiptData) {
-    if (!this.isConnected || !this.writeCharacteristic) {
+    if (!this.isConnected || !this.writeChar) {
       throw new Error('Printer belum terhubung');
     }
 
     const printData = this.formatReceiptForPrinter(receiptData);
-    await this.sendData(printData);
+    const dataArray = this.stringToUint8Array(printData);
+    const buffer = dataArray.buffer;
+    
+    await this.writeData(
+      this.writeChar.service,
+      this.writeChar.uuid,
+      buffer
+    );
+    
     return true;
+  }
+
+  // Check connection status
+  async checkConnection() {
+    if (!this.deviceId) return false;
+    
+    try {
+      const device = await BluetoothLe.getDevice({ deviceId: this.deviceId });
+      return device && device.connected;
+    } catch (error) {
+      return false;
+    }
   }
 }
 
-// Export singleton instance and class
+// Export singleton instance
 const printerService = new PrinterService();
 export default printerService;
 export { PrinterService };

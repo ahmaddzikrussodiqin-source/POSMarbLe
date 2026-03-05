@@ -7,5 +7,10 @@
       "url": "https://delightful-beauty-production-22f0.up.railway.app",
       "allowNavigation": ["https://delightful-beauty-production-22f0.up.railway.app"]
     }
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0
+    }
   }
 }
