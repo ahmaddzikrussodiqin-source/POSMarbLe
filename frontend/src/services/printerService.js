@@ -11,20 +11,40 @@ class PrinterService {
   }
 
   // Check if Web Bluetooth is supported
-  // We return true to allow user to try - actual error handling happens during connection
+  // Returns more detailed info about Bluetooth availability
   isBluetoothSupported() {
-    const hasBluetooth = 'bluetooth' in navigator;
-    console.log('Web Bluetooth in navigator:', hasBluetooth);
-    if (hasBluetooth && navigator.bluetooth) {
-      console.log('Web Bluetooth requestDevice available:', typeof navigator.bluetooth.requestDevice === 'function');
+    // Check if navigator.bluetooth exists
+    if (!('bluetooth' in navigator)) {
+      console.log('Web Bluetooth API: navigator.bluetooth not available');
+      return false;
     }
+    
+    // Check if requestDevice function is available
+    if (!navigator.bluetooth || typeof navigator.bluetooth.requestDevice !== 'function') {
+      console.log('Web Bluetooth API: requestDevice function not available');
+      return false;
+    }
+    
+    console.log('Web Bluetooth API is available');
     return true;
+  }
+  
+  // Get detailed Bluetooth status for debugging
+  getBluetoothStatus() {
+    const status = {
+      hasNavigatorBluetooth: 'bluetooth' in navigator,
+      hasRequestDevice: typeof navigator?.bluetooth?.requestDevice === 'function',
+      userAgent: navigator.userAgent,
+      isAndroid: navigator.userAgent?.toLowerCase().includes('android'),
+    };
+    console.log('Bluetooth Status:', status);
+    return status;
   }
 
   // Request Bluetooth device
   async requestDevice() {
     if (!this.isBluetoothSupported()) {
-      throw new Error('Bluetooth tidak didukung di browser ini. Silakan gunakan browser Chrome/Edge di Android.');
+      throw new Error('Bluetooth tidak didukung di browser ini. Web Bluetooth API tidak tersedia di WebView Android. Silakan gunakan print browser dengan klik "Print" di nota.');
     }
 
     try {
@@ -50,7 +70,7 @@ class PrinterService {
     } catch (error) {
       console.error('Error requesting device:', error);
       if (error.name === 'NotFoundError') {
-        throw new Error('Tidak ada perangkat Bluetooth yang ditemukan');
+        throw new Error('Tidak ada perangkat Bluetooth yang ditemukan. Pastikan printer dalam mode pairing.');
       } else if (error.name === 'SecurityError') {
         throw new Error('Izin Bluetooth ditolak. Mohon berikan izin akses Bluetooth.');
       } else if (error.name === 'NetworkError') {
@@ -122,7 +142,7 @@ class PrinterService {
     try {
       // Check if Bluetooth is available
       if (!this.isBluetoothSupported()) {
-        throw new Error('Bluetooth tidak didukung di browser ini');
+        throw new Error('Bluetooth tidak didukung di browser ini. Web Bluetooth API tidak tersedia di WebView Android. Silakan gunakan print browser.');
       }
 
       // Try to get available devices first to check if Bluetooth is on
@@ -133,11 +153,15 @@ class PrinterService {
         });
         this.device = device;
       } catch (e) {
-        // This error usually means Bluetooth is off
-        if (e.name === 'NotFoundError' || e.message?.includes('bluetooth')) {
-          throw new Error('Bluetooth tidak diaktifkan. Silakan aktifkan Bluetooth di pengaturan perangkat.');
+        // This error usually means Bluetooth is off or Web Bluetooth not available
+        console.error('Bluetooth request error:', e);
+        if (e.name === 'NotFoundError') {
+          throw new Error('Tidak ada perangkat Bluetooth yang ditemukan. Pastikan printer dalam mode pairing dan Bluetooth diaktifkan.');
+        } else if (e.name === 'SecurityError') {
+          throw new Error('Izin Bluetooth ditolak. Mohon berikan izin akses Bluetooth.');
+        } else {
+          throw new Error('Web Bluetooth tidak tersedia di browser ini. Silakan gunakan print browser dengan klik "Print" di nota.');
         }
-        throw e;
       }
 
       await this.connect();
@@ -155,6 +179,8 @@ class PrinterService {
         throw new Error('Bluetooth tidak diaktifkan. Silakan aktifkan Bluetooth terlebih dahulu di pengaturan Android.');
       } else if (errorMsg.includes('Permission') || errorMsg.includes('ditolak')) {
         throw new Error('Izin Bluetooth ditolak. Mohon berikan izin akses Bluetooth.');
+      } else if (errorMsg.includes('Web Bluetooth tidak tersedia')) {
+        throw new Error('Web Bluetooth tidak tersedia di browser ini. Silakan gunakan print browser dengan klik "Print" di nota.');
       }
       throw error;
     }

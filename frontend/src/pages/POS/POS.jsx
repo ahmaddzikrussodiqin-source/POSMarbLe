@@ -144,10 +144,14 @@ const POS = () => {
 
 // Check Bluetooth support and load saved printer
   useEffect(() => {
-    // Always show the printer button and allow user to try connecting
-    // The actual check happens when user clicks connect
-    setBluetoothSupported(true);
-    console.log('Printer feature enabled - will try connection on user action');
+    // Check if Bluetooth is actually supported
+    const btSupported = printerService.isBluetoothSupported();
+    setBluetoothSupported(btSupported);
+    console.log('Bluetooth supported:', btSupported);
+    
+    if (!btSupported) {
+      console.log('Web Bluetooth not available. User will need to use browser print.');
+    }
     
     // Try to load saved printer from localStorage
     const savedPrinter = localStorage.getItem('selectedPrinter');
@@ -155,8 +159,6 @@ const POS = () => {
       try {
         const printer = JSON.parse(savedPrinter);
         setSelectedPrinter(printer);
-        // Note: We can't auto-connect on page load due to browser security
-        // User needs to reconnect each session
       } catch (e) {
         console.error('Error loading saved printer:', e);
       }
