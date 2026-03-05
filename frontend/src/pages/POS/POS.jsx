@@ -604,7 +604,7 @@ const POS = () => {
     return Math.round(amount * (taxRate / 100));
   };
 
-  // Handle print receipt
+  // Handle print receipt - Show print-friendly view in modal for Android
   const handlePrint = async () => {
     // First, try Bluetooth printing if connected
     if (printerConnected && selectedPrinter) {
@@ -623,16 +623,23 @@ const POS = () => {
         return;
       } catch (error) {
         console.error('Bluetooth print failed:', error);
-        alert('Gagal cetak ke printer Bluetooth, akan membuka dialog print browser');
-        // Continue to browser print fallback
+        alert('Gagal cetak ke printer Bluetooth');
+        // Continue to show print-friendly view
       }
     }
     
-    // Browser print fallback
-    // Check if we're on Android - use a different approach for better compatibility
-    if (isAndroid) {
-      // On Android WebView, use direct print in the same window
-      // Create print content
+    // For Android WebView, we need to show the print dialog differently
+    // Create a printable iframe that will trigger the print dialog
+    try {
+      // Try using print API directly - works better in some WebViews
+      const printContent = document.createElement('iframe');
+      printContent.style.position = 'fixed';
+      printContent.style.right = '0';
+      printContent.style.bottom = '0';
+      printContent.style.width = '0';
+      printContent.style.height = '0';
+      printContent.style.border = '0';
+      
       const totalWithTax = notaSettings.tax_rate > 0 
         ? showReceipt.total_amount + calculateTax(showReceipt.total_amount, notaSettings.tax_rate)
         : showReceipt.total_amount;
@@ -653,91 +660,113 @@ const POS = () => {
           <td style="text-align: right; padding: 4px 0;">${formatCurrency(calculateTax(showReceipt.total_amount, notaSettings.tax_rate), notaSettings.currency)}</td>
         </tr>
       ` : '';
-
-      // Create a hidden div with print content
-      const printContent = `
-        <div id="print-content" style="display: none;">
-          <div style="padding: 20px; max-width: 300px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1f2937;">
-            <div style="text-align: center; padding-bottom: 15px; border-bottom: 2px dashed #e5e7eb; margin-bottom: 15px;">
-              <div style="font-size: 32px; margin-bottom: 8px;">${notaSettings.logo ? '<img src="' + notaSettings.logo + '" style="height: 40px;" />' : '🏪'}</div>
-              <div style="font-size: 18px; font-weight: bold; margin-bottom: 4px;">${notaSettings.shop_name || 'Toko'}</div>
-              ${notaSettings.address ? `<div style="font-size: 12px; color: #6b7280; margin: 2px 0;">${notaSettings.address}</div>` : ''}
-              ${notaSettings.phone ? `<div style="font-size: 12px; color: #6b7280; margin: 2px 0;">Telp: ${notaSettings.phone}</div>` : ''}
-              <div style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e5e7eb;">
-                <div style="font-size: 11px; color: #6b7280;">Nomor Pesanan</div>
-                <div style="font-size: 20px; font-weight: bold; color: #d97706;">${showReceipt.order_number}</div>
-              </div>
-            </div>
-            <table style="width: 100%; border-collapse: collapse;">
-              ${itemsHtml}
-              <tr style="padding: 8px 0; border-bottom: 1px solid #f3f4f6;">
-                <td style="padding: 8px 0;">Subtotal</td>
-                <td style="text-align: right;">${formatCurrency(showReceipt.total_amount, notaSettings.currency)}</td>
-              </tr>
-              ${taxHtml}
-              <tr style="padding: 12px 0;">
-                <td style="font-size: 16px; font-weight: bold;">Total</td>
-                <td style="font-size: 22px; font-weight: bold; color: #d97706; text-align: right;">${formatCurrency(totalWithTax, notaSettings.currency)}</td>
-              </tr>
-            </table>
-            <div style="background: #f9fafb; padding: 12px; border-radius: 8px; text-align: center; margin-top: 16px;">
-              <div style="font-size: 12px; color: #6b7280;">Metode Pembayaran</div>
-              <div style="font-weight: bold;">${showReceipt.payment_method === 'cash' ? 'Tunai' : showReceipt.payment_method === 'qris' ? 'QRIS' : 'Kartu Debit'}</div>
-            </div>
-            <div style="text-align: center; margin-top: 20px; padding-top: 12px; border-top: 1px solid #f3f4f6;">
-              <div style="color: #d97706; font-weight: 500;">${notaSettings.shop_name || 'Toko'}</div>
-              <div style="color: #6b7280; font-size: 12px;">${notaSettings.footer_text || 'Terima kasih atas kunjungan Anda!'}</div>
+      
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Nota - ${showReceipt.order_number}</title>
+          <style>
+            @page { margin: 0; }
+            body { 
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+              padding: 10px; 
+              margin: 0;
+              width: 58mm;
+              font-size: 12px;
+            }
+            .header { text-align: center; padding-bottom: 10px; border-bottom: 1px dashed #000; margin-bottom: 10px; }
+            .logo { font-size: 24px; margin-bottom: 5px; }
+            .shop-name { font-size: 14px; font-weight: bold; }
+            .order-number { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #000; }
+            .order-number-value { font-size: 16px; font-weight: bold; color: #d97706; }
+            table { width: 100%; border-collapse: collapse; font-size: 11px; }
+            .total-row { font-weight: bold; font-size: 14px; }
+            .payment-method { background: #f0f0f0; padding: 8px; text-align: center; margin-top: 10px; }
+            .footer { text-align: center; margin-top: 15px; padding-top: 10px; border-top: 1px dashed #000; }
+            @media print {
+              body { width: 58mm !important; margin: 0 !important; padding: 5mm !important; }
+              .no-print { display: none !important; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="logo">${notaSettings.logo ? '<img src="' + notaSettings.logo + '" style="height: 30px;" />' : '🏪'}</div>
+            <div class="shop-name">${notaSettings.shop_name || 'Toko'}</div>
+            ${notaSettings.address ? `<div>${notaSettings.address}</div>` : ''}
+            ${notaSettings.phone ? `<div>Telp: ${notaSettings.phone}</div>` : ''}
+            <div class="order-number">
+              <div style="font-size: 10px; color: #666;">Nomor Pesanan</div>
+              <div class="order-number-value">${showReceipt.order_number}</div>
             </div>
           </div>
-        </div>
+          <table>
+            ${itemsHtml}
+            <tr><td colspan="2"><hr style="border: 0; border-top: 1px dashed #ccc;"></td></tr>
+            <tr>
+              <td>Subtotal</td>
+              <td style="text-align: right;">${formatCurrency(showReceipt.total_amount, notaSettings.currency)}</td>
+            </tr>
+            ${taxHtml}
+            <tr class="total-row">
+              <td>TOTAL</td>
+              <td style="text-align: right;">${formatCurrency(totalWithTax, notaSettings.currency)}</td>
+            </tr>
+          </table>
+          <div class="payment-method">
+            <div style="font-size: 10px; color: #666;">Metode Pembayaran</div>
+            <div style="font-weight: bold;">${showReceipt.payment_method === 'cash' ? 'Tunai' : showReceipt.payment_method === 'qris' ? 'QRIS' : 'Kartu Debit'}</div>
+          </div>
+          <div class="footer">
+            <div style="font-weight: bold; color: #d97706;">${notaSettings.shop_name || 'Toko'}</div>
+            <div style="font-size: 10px;">${notaSettings.footer_text || 'Terima kasih!'}</div>
+          </div>
+          <div class="no-print" style="text-align: center; margin-top: 20px; padding: 10px;">
+            <button onclick="window.print()" style="padding: 10px 20px; background: #d97706; color: white; border: none; border-radius: 5px; font-size: 14px; cursor: pointer;">🖨️ CETAK</button>
+            <p style="font-size: 10px; color: #666; margin-top: 10px;">Pilih printer thermal 58mm</p>
+          </div>
+        </body>
+        </html>
       `;
       
-      // Insert print content into body and show it
-      const tempDiv = document.createElement('div');
-      tempDiv.id = 'temp-print-container';
-      tempDiv.innerHTML = printContent;
-      tempDiv.style.position = 'fixed';
-      tempDiv.style.top = '0';
-      tempDiv.style.left = '0';
-      tempDiv.style.width = '100%';
-      tempDiv.style.height = '100%';
-      tempDiv.style.background = 'white';
-      tempDiv.style.zIndex = '99999';
-      tempDiv.style.overflow = 'auto';
+      printContent.srcdoc = htmlContent;
+      document.body.appendChild(printContent);
       
-      // Add print button
-      const printBtn = document.createElement('button');
-      printBtn.innerHTML = '🖨️ CETAK NOTA';
-      printBtn.style.cssText = 'position: fixed; bottom: 20px; right: 20px; padding: 15px 30px; background: #d97706; color: white; border: none; font-size: 16px; font-weight: bold; cursor: pointer; border-radius: 8px; z-index: 100000; box-shadow: 0 2px 10px rgba(0,0,0,0.2);';
-      printBtn.onclick = () => {
-        window.print();
-      };
-      tempDiv.appendChild(printBtn);
-      
-      // Add close button
-      const closeBtn = document.createElement('button');
-      closeBtn.innerHTML = '✕ Tutup';
-      closeBtn.style.cssText = 'position: fixed; bottom: 20px; left: 20px; padding: 15px 30px; background: #6b7280; color: white; border: none; font-size: 16px; font-weight: bold; cursor: pointer; border-radius: 8px; z-index: 100000; box-shadow: 0 2px 10px rgba(0,0,0,0.2);';
-      closeBtn.onclick = () => {
-        document.body.removeChild(tempDiv);
-      };
-      tempDiv.appendChild(closeBtn);
-      
-      document.body.appendChild(tempDiv);
-      
-      // Try to auto-print
-      setTimeout(() => {
+      // Wait for iframe to load, then print
+      printContent.onload = () => {
         try {
-          window.print();
-        } catch(e) {
-          console.log('Auto-print failed:', e);
+          printContent.contentWindow.print();
+        } catch (e) {
+          console.log('Print error:', e);
+          // If iframe print fails, try showing the content in a new window
+          document.body.removeChild(printContent);
+          showPrintWindow(totalWithTax, itemsHtml, taxHtml);
         }
-      }, 500);
+      };
       
-      return;
+      // Fallback: if onload doesn't fire, try after a delay
+      setTimeout(() => {
+        if (printContent.parentNode) {
+          try {
+            printContent.contentWindow.print();
+          } catch (e) {
+            console.log('Print timeout error:', e);
+            document.body.removeChild(printContent);
+            showPrintWindow(totalWithTax, itemsHtml, taxHtml);
+          }
+        }
+      }, 1000);
+      
+    } catch (error) {
+      console.error('Print error:', error);
+      // Fallback to new window
+      showPrintWindow(totalWithTax, itemsHtml, taxHtml);
     }
-    
-    // For non-Android devices, use the new window approach
+  };
+
+  // Helper function to show print window (fallback)
+  const showPrintWindow = (totalWithTax, itemsHtml, taxHtml) => {
     const printWindow = window.open('', '_blank', 'width=400,height=600');
     
     if (!printWindow) {
@@ -745,27 +774,6 @@ const POS = () => {
       return;
     }
     
-    const totalWithTax = notaSettings.tax_rate > 0 
-      ? showReceipt.total_amount + calculateTax(showReceipt.total_amount, notaSettings.tax_rate)
-      : showReceipt.total_amount;
-    
-    const itemsHtml = showReceipt.items.map(item => `
-      <tr>
-        <td style="padding: 4px 0;">
-          <div style="font-weight: 500;">${item.product_name}</div>
-          <div style="color: #6b7280; font-size: 12px;">x${item.quantity}</div>
-        </td>
-        <td style="text-align: right; padding: 4px 0;">${formatCurrency(item.subtotal, notaSettings.currency)}</td>
-      </tr>
-    `).join('');
-
-    const taxHtml = notaSettings.tax_rate > 0 ? `
-      <tr>
-        <td style="padding: 4px 0; color: #6b7280;">Pajak (${notaSettings.tax_rate}%)</td>
-        <td style="text-align: right; padding: 4px 0;">${formatCurrency(calculateTax(showReceipt.total_amount, notaSettings.tax_rate), notaSettings.currency)}</td>
-      </tr>
-    ` : '';
-
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
@@ -774,115 +782,20 @@ const POS = () => {
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            padding: 20px;
-            max-width: 300px;
-            margin: 0 auto;
-            color: #1f2937;
-          }
-          .header {
-            text-align: center;
-            padding-bottom: 15px;
-            border-bottom: 2px dashed #e5e7eb;
-            margin-bottom: 15px;
-          }
-          .logo {
-            font-size: 32px;
-            margin-bottom: 8px;
-          }
-          .shop-name {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 4px;
-          }
-          .address, .phone {
-            font-size: 12px;
-            color: #6b7280;
-            margin: 2px 0;
-          }
-          .order-number {
-            margin-top: 12px;
-            padding-top: 12px;
-            border-top: 1px dashed #e5e7eb;
-          }
-          .order-number-label {
-            font-size: 11px;
-            color: #6b7280;
-          }
-          .order-number-value {
-            font-size: 20px;
-            font-weight: bold;
-            color: #d97706;
-          }
-          table {
-            width: 100%;
-            border-collapse: collapse;
-          }
-          .subtotal {
-            padding: 8px 0;
-            border-bottom: 1px solid #f3f4f6;
-          }
-          .total-row {
-            padding: 12px 0;
-          }
-          .total-label {
-            font-size: 16px;
-            font-weight: bold;
-          }
-          .total-value {
-            font-size: 22px;
-            font-weight: bold;
-            color: #d97706;
-          }
-          .payment-method {
-            background: #f9fafb;
-            padding: 12px;
-            border-radius: 8px;
-            text-align: center;
-            margin-top: 16px;
-          }
-          .payment-method-label {
-            font-size: 12px;
-            color: #6b7280;
-          }
-          .payment-method-value {
-            font-weight: bold;
-          }
-          .footer {
-            text-align: center;
-            margin-top: 20px;
-            padding-top: 12px;
-            border-top: 1px solid #f3f4f6;
-          }
-          .footer-shop {
-            color: #d97706;
-            font-weight: 500;
-          }
-          .footer-message {
-            color: #6b7280;
-            font-size: 12px;
-          }
-          .print-btn {
-            display: block;
-            width: 100%;
-            padding: 15px;
-            background: #d97706;
-            color: white;
-            border: none;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 20px;
-            border-radius: 8px;
-          }
-          .print-btn:hover {
-            background: #b45309;
-          }
-          @media print {
-            body { margin: 0; padding: 10px; }
-            .print-btn { display: none !important; }
-          }
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; max-width: 300px; margin: 0 auto; color: #1f2937; }
+          .header { text-align: center; padding-bottom: 15px; border-bottom: 2px dashed #e5e7eb; margin-bottom: 15px; }
+          .shop-name { font-size: 18px; font-weight: bold; margin-bottom: 4px; }
+          .order-number { margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e5e7eb; }
+          .order-number-value { font-size: 20px; font-weight: bold; color: #d97706; }
+          table { width: 100%; border-collapse: collapse; }
+          .subtotal { padding: 8px 0; border-bottom: 1px solid #f3f4f6; }
+          .total-row { padding: 12px 0; }
+          .total-label { font-size: 16px; font-weight: bold; }
+          .total-value { font-size: 22px; font-weight: bold; color: #d97706; }
+          .payment-method { background: #f9fafb; padding: 12px; border-radius: 8px; text-align: center; margin-top: 16px; }
+          .footer { text-align: center; margin-top: 20px; padding-top: 12px; border-top: 1px solid #f3f4f6; }
+          .print-btn { display: block; width: 100%; padding: 15px; background: #d97706; color: white; border: none; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 20px; border-radius: 8px; }
+          @media print { body { margin: 0; padding: 10px; } .print-btn { display: none !important; } }
         </style>
       </head>
       <body>
@@ -896,53 +809,25 @@ const POS = () => {
             <div class="order-number-value">${showReceipt.order_number}</div>
           </div>
         </div>
-
         <table>
           ${itemsHtml}
-          <tr class="subtotal">
-            <td style="padding: 8px 0;">Subtotal</td>
-            <td style="text-align: right;">${formatCurrency(showReceipt.total_amount, notaSettings.currency)}</td>
-          </tr>
+          <tr class="subtotal"><td style="padding: 8px 0;">Subtotal</td><td style="text-align: right;">${formatCurrency(showReceipt.total_amount, notaSettings.currency)}</td></tr>
           ${taxHtml}
-          <tr class="total-row">
-            <td class="total-label">Total</td>
-            <td class="total-value">${formatCurrency(totalWithTax, notaSettings.currency)}</td>
-          </tr>
+          <tr class="total-row"><td class="total-label">Total</td><td class="total-value">${formatCurrency(totalWithTax, notaSettings.currency)}</td></tr>
         </table>
-
         <div class="payment-method">
           <div class="payment-method-label">Metode Pembayaran</div>
           <div class="payment-method-value">${showReceipt.payment_method === 'cash' ? 'Tunai' : showReceipt.payment_method === 'qris' ? 'QRIS' : 'Kartu Debit'}</div>
         </div>
-
         <div class="footer">
           <div class="footer-shop">${notaSettings.shop_name || 'Toko'}</div>
           <div class="footer-message">${notaSettings.footer_text || 'Terima kasih atas kunjungan Anda!'}</div>
         </div>
-
         <button class="print-btn" onclick="window.print()">🖨️ CETAK NOTA</button>
-        
-        <script>
-          window.onload = function() {
-            setTimeout(function() {
-              try {
-                window.print();
-              } catch(e) {
-                console.log('Auto-print failed:', e);
-              }
-            }, 500);
-          };
-          
-          window.onafterprint = function() {
-            if (window.opener) {
-              window.opener.postMessage({ type: 'print-completed' }, '*');
-            }
-          };
-        </script>
+        <script>window.onload = function() { setTimeout(function() { try { window.print(); } catch(e) { console.log('Auto-print failed:', e); } }, 500); };</script>
       </body>
       </html>
     `);
-    
     printWindow.document.close();
   };
 
