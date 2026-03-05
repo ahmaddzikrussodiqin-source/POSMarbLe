@@ -142,10 +142,12 @@ const POS = () => {
     loadNotaSettings();
   }, []);
 
-  // Check Bluetooth support and load saved printer
+// Check Bluetooth support and load saved printer
   useEffect(() => {
-    // Check if Bluetooth is supported
-    setBluetoothSupported(printerService.isBluetoothSupported());
+    // Always show the printer button and allow user to try connecting
+    // The actual check happens when user clicks connect
+    setBluetoothSupported(true);
+    console.log('Printer feature enabled - will try connection on user action');
     
     // Try to load saved printer from localStorage
     const savedPrinter = localStorage.getItem('selectedPrinter');

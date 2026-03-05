@@ -11,8 +11,14 @@ class PrinterService {
   }
 
   // Check if Web Bluetooth is supported
+  // We return true to allow user to try - actual error handling happens during connection
   isBluetoothSupported() {
-    return 'bluetooth' in navigator;
+    const hasBluetooth = 'bluetooth' in navigator;
+    console.log('Web Bluetooth in navigator:', hasBluetooth);
+    if (hasBluetooth && navigator.bluetooth) {
+      console.log('Web Bluetooth requestDevice available:', typeof navigator.bluetooth.requestDevice === 'function');
+    }
+    return true;
   }
 
   // Request Bluetooth device
