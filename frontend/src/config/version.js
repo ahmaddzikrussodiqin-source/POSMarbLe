@@ -1,9 +1,9 @@
 // Version configuration for POSMarbLe App
 // This file contains version-related constants used throughout the app
 
-export const APP_VERSION = '1.00.0';
+export const APP_VERSION = '1.01.8';
 export const APP_NAME = 'POSMarbLe';
-export const APP_BUILD_NUMBER = '1';
+export const APP_BUILD_NUMBER = '18';
 
 // Version comparison helper
 export const compareVersions = (current, latest) => {

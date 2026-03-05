@@ -1116,48 +1116,53 @@ const handlePrintAllTodaySales = async () => {
         </div>
       </div>
 
-      {/* Product Quantity Modal */}
+      {/* Product Quantity Modal - Fixed for Android with scrollable content */}
       {selectedProduct && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl">
-            <div className="text-center mb-6">
-              <div className="w-32 h-32 mx-auto rounded-2xl overflow-hidden bg-gray-100 mb-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl p-4 sm:p-6 max-w-sm w-full max-h-[85vh] sm:max-h-[90vh] overflow-y-auto shadow-2xl">
+            {/* Drag handle for mobile */}
+            <div className="sm:hidden flex justify-center mb-2">
+              <div className="w-12 h-1 bg-gray-300 rounded-full"></div>
+            </div>
+            
+            <div className="text-center mb-4 sm:mb-6">
+              <div className="w-24 h-24 sm:w-32 sm:h-32 mx-auto rounded-2xl overflow-hidden bg-gray-100 mb-3 sm:mb-4">
                 {selectedProduct.image_url ? (
                   <img src={selectedProduct.image_url} alt={selectedProduct.name} className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-6xl">☕</div>
+                  <div className="w-full h-full flex items-center justify-center text-4xl sm:text-6xl">☕</div>
                 )}
               </div>
-              <h3 className="text-2xl font-bold text-gray-800">{selectedProduct.name}</h3>
-              <p className="text-amber-600 font-bold text-xl">{formatCurrency(selectedProduct.price)}</p>
+              <h3 className="text-xl sm:text-2xl font-bold text-gray-800">{selectedProduct.name}</h3>
+              <p className="text-amber-600 font-bold text-lg sm:text-xl">{formatCurrency(selectedProduct.price)}</p>
               <p className="text-sm text-gray-500">
                 Stok: {selectedProduct.has_ingredients ? selectedProduct.calculated_stock : selectedProduct.stock}
               </p>
             </div>
 
             {/* Quantity Picker */}
-            <div className="flex items-center justify-center gap-6 mb-6">
+            <div className="flex items-center justify-center gap-4 sm:gap-6 mb-4 sm:mb-6">
               <button
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="w-14 h-14 bg-gray-100 rounded-full hover:bg-gray-200 flex items-center justify-center text-2xl font-bold"
+                className="w-12 h-12 sm:w-14 sm:h-14 bg-gray-100 rounded-full hover:bg-gray-200 flex items-center justify-center text-xl sm:text-2xl font-bold"
               >
                 -
               </button>
-              <span className="text-4xl font-bold w-20 text-center">{quantity}</span>
+              <span className="text-3xl sm:text-4xl font-bold w-16 sm:w-20 text-center">{quantity}</span>
               <button
                 onClick={() => setQuantity(quantity + 1)}
-                className="w-14 h-14 bg-amber-500 rounded-full hover:bg-amber-600 flex items-center justify-center text-2xl font-bold text-white"
+                className="w-12 h-12 sm:w-14 sm:h-14 bg-amber-500 rounded-full hover:bg-amber-600 flex items-center justify-center text-xl sm:text-2xl font-bold text-white"
               >
                 +
               </button>
             </div>
 
-            <div className="text-center mb-6">
-              <p className="text-gray-500">Total</p>
-              <p className="text-3xl font-bold text-amber-700">{formatCurrency(selectedProduct.price * quantity)}</p>
+            <div className="text-center mb-4 sm:mb-6">
+              <p className="text-gray-500 text-sm sm:text-base">Total</p>
+              <p className="text-2xl sm:text-3xl font-bold text-amber-700">{formatCurrency(selectedProduct.price * quantity)}</p>
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex gap-3 mt-auto">
               <button
                 onClick={() => setSelectedProduct(null)}
                 className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition"
