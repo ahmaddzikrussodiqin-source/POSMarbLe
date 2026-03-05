@@ -1180,30 +1180,30 @@ const handlePrintAllTodaySales = async () => {
         </div>
       )}
 
-      {/* Receipt Modal - Using Nota Settings from Admin */}
+      {/* Receipt Modal - Using Nota Settings from Admin - Fixed for Android with scrollable content */}
       {showReceipt && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-3xl p-0 max-w-md w-full shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50">
+          <div className="bg-white rounded-3xl p-0 max-w-md w-full shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
             {/* Receipt Header - Success */}
-            <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-6 text-white text-center">
-              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-3">
-                <span style={{color: '#16a34a', fontSize: '2rem', fontWeight: 'bold'}}>✓</span>
+            <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-4 sm:p-6 text-white text-center flex-shrink-0">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3">
+                <span style={{color: '#16a34a', fontSize: '1.5rem', fontWeight: 'bold'}}>✓</span>
               </div>
-              <h2 className="text-2xl font-bold">Pembayaran Berhasil!</h2>
-              <p className="text-emerald-100">Terima kasih telah berbelanja</p>
+              <h2 className="text-xl sm:text-2xl font-bold">Pembayaran Berhasil!</h2>
+              <p className="text-emerald-100 text-sm">Terima kasih telah berbelanja</p>
             </div>
 
-            {/* Receipt Body */}
-            <div className="p-6">
+            {/* Receipt Body - Scrollable */}
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1">
               {/* Shop Info from Nota Settings */}
               <div className="border-b-2 border-dashed border-gray-200 pb-4 mb-4">
                 {/* Logo */}
                 {notaSettings.show_logo && (
                   <div className="text-center mb-3">
                     {notaSettings.logo ? (
-                      <img src={notaSettings.logo} alt="Logo" className="h-16 w-auto object-contain mx-auto" />
+                      <img src={notaSettings.logo} alt="Logo" className="h-12 sm:h-16 w-auto object-contain mx-auto" />
                     ) : (
-                      <span className="text-4xl">🏪</span>
+                      <span className="text-3xl sm:text-4xl">🏪</span>
                     )}
                   </div>
                 )}
@@ -1230,14 +1230,14 @@ const handlePrintAllTodaySales = async () => {
                 {/* Order Number */}
                 <div className="text-center mt-4 pt-3 border-t border-dashed border-gray-200">
                   <p className="text-gray-500 text-xs">Nomor Pesanan</p>
-                  <p className="font-bold text-xl text-amber-700">{showReceipt.order_number}</p>
+                  <p className="font-bold text-lg sm:text-xl text-amber-700">{showReceipt.order_number}</p>
                 </div>
               </div>
 
-              {/* Items */}
-              <div className="space-y-2 mb-4">
+              {/* Items - Scrollable if too many */}
+              <div className="space-y-2 mb-4 max-h-40 overflow-y-auto">
                 {showReceipt.items.map((item, index) => (
-                  <div key={index} className="flex justify-between text-gray-700">
+                  <div key={index} className="flex justify-between text-gray-700 text-sm">
                     <div>
                       <span className="font-medium">{item.product_name}</span>
                       <span className="text-gray-500 ml-2">x{item.quantity}</span>
@@ -1272,7 +1272,7 @@ const handlePrintAllTodaySales = async () => {
                       Termasuk pajak {notaSettings.tax_rate}%
                     </span>
                   )}
-                  <span className="text-2xl font-bold text-amber-700">
+                  <span className="text-xl sm:text-2xl font-bold text-amber-700">
                     {formatCurrency(
                       notaSettings.tax_rate > 0 
                         ? showReceipt.total_amount + calculateTax(showReceipt.total_amount, notaSettings.tax_rate)
@@ -1306,19 +1306,20 @@ const handlePrintAllTodaySales = async () => {
               </div>
             </div>
 
-            <div className="p-4 bg-gray-50 flex gap-3 no-print">
+            {/* Buttons - Always visible at bottom */}
+            <div className="p-3 sm:p-4 bg-gray-50 flex gap-2 sm:gap-3 flex-shrink-0">
               <button
                 onClick={handlePrint}
-                className="flex-1 py-3 bg-white border-2 border-amber-500 text-amber-600 rounded-xl font-bold hover:bg-amber-50 transition flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 sm:py-3 bg-white border-2 border-amber-500 text-amber-600 rounded-xl font-bold hover:bg-amber-50 transition flex items-center justify-center gap-2 text-sm sm:text-base"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                 </svg>
                 Print
               </button>
               <button
                 onClick={() => setShowReceipt(null)}
-                className="flex-1 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-bold hover:from-amber-600 hover:to-orange-600 transition"
+                className="flex-1 py-2.5 sm:py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-bold hover:from-amber-600 hover:to-orange-600 transition text-sm sm:text-base"
               >
                 Selesai
               </button>
